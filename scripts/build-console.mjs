@@ -38,4 +38,7 @@ const output = `// Generated from src/*.js. Paste this whole file into the brows
 
 fs.mkdirSync(path.join(root, "dist"), { recursive: true });
 fs.writeFileSync(path.join(root, "dist/xhs-album-builder.console.js"), output);
+fs.mkdirSync(path.join(root, "extension"), { recursive: true });
+fs.writeFileSync(path.join(root, "extension/xhs-album-builder.page.js"), output);
 console.log("built dist/xhs-album-builder.console.js");
+console.log("built extension/xhs-album-builder.page.js");

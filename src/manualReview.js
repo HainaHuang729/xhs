@@ -1,15 +1,8 @@
 import { normalizeText } from "./dom.js";
+import { OTHER_CATEGORY_NAME, categoryKey, cleanCategoryName, isOtherName, isRegularCategory } from "./categoryNames.js";
 
 function compactTitle(title) {
   return normalizeText(title).toLowerCase().replace(/\s+/g, "");
-}
-
-function isOtherName(name) {
-  return /^(其他|未分类|杂项|其它|其他收藏)$/i.test(normalizeText(name));
-}
-
-function cleanCategoryName(name, index) {
-  return normalizeText(name).replace(/[《》"'`]/g, "").slice(0, 18) || `分类${index + 1}`;
 }
 
 function categoryIntro(category) {
@@ -75,7 +68,7 @@ export function manualAssignmentsToPlan(input, notes, existingAlbums, config, gr
 
   const selected = (notes || []).slice(0, config.maxTitlesForPrompt);
   const categories = new Map();
-  const other = { name: "其他", title: "其他", intro: "", count: 0, titles: [], isOther: true };
+  const other = { name: OTHER_CATEGORY_NAME, title: OTHER_CATEGORY_NAME, intro: "", count: 0, titles: [], isOther: true };
   const existingNames = new Set((existingAlbums || []).map((album) => normalizeText(album.name || album)).filter(Boolean));
   const byIndex = new Map(selected.map((note, index) => [index + 1, note]));
   const handledIndexes = new Set();
@@ -90,11 +83,11 @@ export function manualAssignmentsToPlan(input, notes, existingAlbums, config, gr
     if (!title || !rawName) continue;
 
     let category = other;
-    if (!isOtherName(rawName)) {
-      const name = cleanCategoryName(rawName, categories.size);
-      const key = compactTitle(name);
+    const name = cleanCategoryName(rawName, categories.size);
+    if (!isOtherName(name)) {
+      const key = categoryKey(name) || compactTitle(name);
       if (!categories.has(key)) {
-        const regularCount = Array.from(categories.values()).filter((candidate) => !candidate.isOther).length;
+        const regularCount = Array.from(categories.values()).filter(isRegularCategory).length;
         if (regularCount < config.maxCategories || existingNames.has(name)) {
           categories.set(key, { name, title: name, intro: "", count: 0, titles: [], isExisting: existingNames.has(name) });
         }
@@ -115,7 +108,7 @@ export function manualAssignmentsToPlan(input, notes, existingAlbums, config, gr
   other.count = other.titles.length;
 
   const outputCategories = Array.from(categories.values())
-    .filter((category) => category.titles.length)
+    .filter((category) => category.titles.length && isRegularCategory(category))
     .map((category) => ({ ...category, intro: categoryIntro(category), count: category.titles.length }));
   if (other.titles.length) outputCategories.push({ ...other, intro: categoryIntro(other), count: other.titles.length });
 

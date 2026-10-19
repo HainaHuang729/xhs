@@ -1,18 +1,7 @@
 import { normalizeText, sleep } from "./dom.js";
+import { OTHER_CATEGORY_NAME, categoryKey, cleanCategoryName, isOtherName, isRegularCategory } from "./categoryNames.js";
 import { logger, errorDetail, errorMessage } from "./logger.js";
 import { state } from "./state.js";
-
-function isOtherName(name) {
-  return /^(其他|未分类|杂项|其它|其他收藏)$/i.test(normalizeText(name));
-}
-
-function categoryKey(name) {
-  return normalizeText(name).replace(/[《》"'`]/g, "").toLowerCase();
-}
-
-function cleanCategoryName(name, index) {
-  return normalizeText(name).replace(/[《》"'`]/g, "").slice(0, 18) || `分类${index + 1}`;
-}
 
 function introFor(category) {
   if (category.intro) return normalizeText(category.intro).slice(0, 140);
@@ -33,7 +22,7 @@ function appendTitle(category, title) {
 }
 
 function usedRegularCount(categoryMap) {
-  return Array.from(categoryMap.values()).filter((category) => !isOtherName(category.name) && (category.titles?.length || !category.isExisting)).length;
+  return Array.from(categoryMap.values()).filter((category) => isRegularCategory(category) && (category.titles?.length || !category.isExisting)).length;
 }
 
 function canAddCategory(categoryMap, config) {
@@ -76,7 +65,7 @@ function localCategoryForTitle(title, granularity) {
     ["拍照机位", ["机位", "拍照", "摄影", "滤镜", "壁纸", "live"]]
   ];
   const rules = granularity === "fine" ? fineRules : coarseRules;
-  return rules.find(([, keys]) => keys.some((key) => text.includes(key)))?.[0] || "其他";
+  return rules.find(([, keys]) => keys.some((key) => text.includes(key)))?.[0] || OTHER_CATEGORY_NAME;
 }
 
 function assignLocally(batch, categoryMap, otherCategory, granularity, config) {
@@ -186,10 +175,10 @@ function applyLlmAssignments(batch, payload, categoryMap, otherCategory, config)
     if (!note || !title || !rawName || handled.has(title)) continue;
 
     let category = otherCategory;
-    if (!isOtherName(rawName)) {
-      const key = categoryKey(rawName);
+    const name = cleanCategoryName(rawName, categoryMap.size);
+    if (!isOtherName(name)) {
+      const key = categoryKey(name);
       if (!categoryMap.has(key) && canAddCategory(categoryMap, config)) {
-        const name = cleanCategoryName(rawName, categoryMap.size);
         categoryMap.set(key, { name, title: name, intro: "", count: 0, titles: [], isExisting: false });
       }
       category = categoryMap.get(key) || otherCategory;
@@ -214,7 +203,7 @@ export async function classifyNotes(notes, existingAlbumNames, options, onProgre
   for (let index = 0; index < selected.length; index += batchSize) batches.push(selected.slice(index, index + batchSize));
 
   const categoryMap = createExistingCategoryMap(existingAlbumNames, config);
-  const otherCategory = { name: "其他", title: "其他", intro: "未能可靠归入上述分类的收藏笔记，作为备注保留。", count: 0, titles: [], isOther: true };
+  const otherCategory = { name: OTHER_CATEGORY_NAME, title: OTHER_CATEGORY_NAME, intro: "未能可靠归入上述分类的收藏笔记，作为备注保留。", count: 0, titles: [], isOther: true };
   state.assignmentCache = new Map();
 
   for (let index = 0; index < batches.length; index += 1) {
@@ -241,7 +230,7 @@ export async function classifyNotes(notes, existingAlbumNames, options, onProgre
   }
 
   const categories = Array.from(categoryMap.values())
-    .filter((category) => category.titles.length)
+    .filter((category) => category.titles.length && isRegularCategory(category))
     .map((category) => ({ ...category, intro: introFor(category), count: category.titles.length }));
   if (otherCategory.titles.length) categories.push({ ...otherCategory, intro: introFor(otherCategory), count: otherCategory.titles.length });
 

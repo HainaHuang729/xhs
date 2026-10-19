@@ -1,4 +1,5 @@
 import { logger, errorDetail, errorMessage } from "./logger.js";
+import { isOtherName, isRegularCategory } from "./categoryNames.js";
 import { normalizeText, sleep } from "./dom.js";
 import { state } from "./state.js";
 import { noteKey } from "./scanner.js";
@@ -280,7 +281,7 @@ export function buildAssignments(plan, collectedNotes) {
   const seen = new Set();
   const assignments = [];
   const pushAssignment = (note, category) => {
-    if (!note || !category || /^(其他|未分类|杂项|其它|其他收藏)$/i.test(category)) return;
+    if (!note || !category || isOtherName(category)) return;
     const title = normalizeText(note.title);
     const noteId = note.noteId;
     const key = `${noteId || noteKey(note) || title}::${category}`;
@@ -291,7 +292,7 @@ export function buildAssignments(plan, collectedNotes) {
   };
 
   for (const category of plan.categories) {
-    if (category.isOther) continue;
+    if (!isRegularCategory(category)) continue;
     for (const rawTitle of category.titles || []) {
       const title = normalizeText(rawTitle);
       const note = (byTitle.get(title) || []).shift() || (byCompactTitle.get(title.toLowerCase().replace(/\s+/g, "")) || []).shift();

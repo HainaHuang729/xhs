@@ -1,4 +1,5 @@
 import { APP_ID } from "./config.js";
+import { isRegularCategory } from "./categoryNames.js";
 import { escapeHtml, normalizeText } from "./dom.js";
 import { findFavSubTabBar, isFavNotePage } from "./scanner.js";
 import { state } from "./state.js";
@@ -334,7 +335,7 @@ export function showError(error) {
 export function showPlanDialog(notes, plan, callbacks) {
   state.plan = plan;
   const categories = plan.categories || [];
-  const regularCount = categories.filter((category) => !category.isOther).length;
+  const regularCount = categories.filter(isRegularCategory).length;
   const other = categories.find((category) => category.isOther);
   const analyzed = Number(plan.analyzedTitleCount) || Math.min(notes.length, state.config.maxTitlesForPrompt);
   const total = Number(plan.totalTitleCount) || notes.length;

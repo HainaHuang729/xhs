@@ -92,7 +92,7 @@ function resetWorkflowState() {
 
 // ---- src/logger.js ----
 function errorMessage(error) {
-  if (!error) return "未知错误";
+  if (!error) return "\u672a\u77e5\u9519\u8bef";
   return String(
     error.message ||
       error.msg ||
@@ -192,7 +192,7 @@ function waitFor(probe, timeoutMs = 6000, intervalMs = 120) {
         return;
       }
       if (Date.now() - startedAt > timeoutMs) {
-        reject(new Error("等待页面元素超时"));
+        reject(new Error("\u7b49\u5f85\u9875\u9762\u5143\u7d20\u8d85\u65f6"));
         return;
       }
       setTimeout(tick, intervalMs);
@@ -228,6 +228,75 @@ function updateUrlParams(params) {
 }
 
 
+// ---- src/categoryNames.js ----
+
+const OTHER_CATEGORY_NAME = "\u5176\u4ed6";
+
+const quoteChars = /[\u300a\u300b"'`\u201c\u201d\u2018\u2019]/g;
+const separatorChars = /[\s:_\uff1a\-\u2014_/|\u00b7.\u3002,\uff0c]+/g;
+const trailingIndex = /(?:[#\u7b2c]?\d+|[\uff08(]\d+[\uff09)])$/;
+
+function compactName(name) {
+  return normalizeText(name)
+    .replace(quoteChars, "")
+    .replace(separatorChars, "")
+    .toLowerCase();
+}
+
+function stripAlbumWords(name) {
+  return name
+    .replace(trailingIndex, "")
+    .replace(/^(\u4e13\u8f91|\u5206\u7c7b|\u5408\u96c6|\u6536\u85cf\u5939|\u6536\u85cf|\u7b14\u8bb0|\u5185\u5bb9)/, "")
+    .replace(/(\u4e13\u8f91|\u5206\u7c7b|\u5408\u96c6|\u6536\u85cf\u5939|\u6536\u85cf|\u7b14\u8bb0|\u5185\u5bb9)$/, "")
+    .replace(trailingIndex, "");
+}
+
+function categoryKey(name) {
+  return compactName(name);
+}
+
+function cleanCategoryName(name, index) {
+  return normalizeText(name).replace(quoteChars, "").slice(0, 18) || `\u5206\u7c7b${index + 1}`;
+}
+
+function isOtherName(name) {
+  const compact = compactName(name);
+  if (!compact) return false;
+
+  const variants = new Set([
+    "\u5176\u4ed6",
+    "\u5176\u5b83",
+    "\u5176\u4ed6\u6536\u85cf",
+    "\u5176\u5b83\u6536\u85cf",
+    "\u5176\u4ed6\u7b14\u8bb0",
+    "\u5176\u5b83\u7b14\u8bb0",
+    "\u5176\u4ed6\u5185\u5bb9",
+    "\u5176\u5b83\u5185\u5bb9",
+    "\u672a\u5206\u7c7b",
+    "\u672a\u5f52\u7c7b",
+    "\u5f85\u5206\u7c7b",
+    "\u5f85\u5f52\u7c7b",
+    "\u65e0\u6cd5\u5206\u7c7b",
+    "\u65e0\u6cd5\u5f52\u7c7b",
+    "\u4e0d\u786e\u5b9a",
+    "\u6742\u9879",
+    "\u6742\u7c7b",
+    "\u5f85\u6574\u7406",
+    "\u672a\u6574\u7406"
+  ]);
+
+  const stripped = stripAlbumWords(compact);
+  if (variants.has(compact) || variants.has(stripped)) return true;
+  if (/^(\u5176\u4ed6|\u5176\u5b83|\u672a\u5206\u7c7b|\u672a\u5f52\u7c7b|\u5f85\u5206\u7c7b|\u5f85\u5f52\u7c7b|\u65e0\u6cd5\u5206\u7c7b|\u65e0\u6cd5\u5f52\u7c7b|\u4e0d\u786e\u5b9a|\u6742\u9879|\u6742\u7c7b|\u5f85\u6574\u7406|\u672a\u6574\u7406)\d*$/.test(stripped)) return true;
+  if (/^(other|others|misc|miscellaneous|uncategorized|uncategorised|unclassified)(notes?|albums?|categories?|items?|content|favorites?)?\d*$/.test(stripped)) return true;
+  return false;
+}
+
+function isRegularCategory(category) {
+  return !!category && !category.isOther && !isOtherName(category.name || category.title || category);
+}
+
+
 // ---- src/scanner.js ----
 
 const tabBarSelector = ".tab-content-item .sub-tab-list, .tab-content-item .reds-tabs-list, .feeds-tab-container .sub-tab-list";
@@ -252,7 +321,7 @@ function isFavNotePage() {
 function findFavSubTabBar() {
   return Array.from(document.querySelectorAll(tabBarSelector)).find((element) => {
     const text = normalizeText(element.textContent);
-    return isVisible(element) && /笔记\s*・?\s*\d*/.test(text) && /专辑\s*・?\s*\d*/.test(text);
+    return isVisible(element) && /\u7b14\u8bb0\s*\u30fb?\s*\d*/.test(text) && /\u4e13\u8f91\s*\u30fb?\s*\d*/.test(text);
   });
 }
 
@@ -265,7 +334,7 @@ function findFavSubTab(matcher) {
 }
 
 async function switchToNoteTab() {
-  const tab = findFavSubTab((text) => /笔记/.test(text));
+  const tab = findFavSubTab((text) => /\u7b14\u8bb0/.test(text));
   if (tab) {
     tab.scrollIntoView({ block: "center", inline: "center" });
     fireClick(tab);
@@ -277,7 +346,7 @@ async function switchToNoteTab() {
 }
 
 async function switchToAlbumTab() {
-  const tab = findFavSubTab((text) => /专辑/.test(text));
+  const tab = findFavSubTab((text) => /\u4e13\u8f91/.test(text));
   if (tab) {
     tab.scrollIntoView({ block: "center", inline: "center" });
     fireClick(tab);
@@ -316,8 +385,8 @@ function isCollectedHref(href) {
 function titleLooksValid(title) {
   const text = normalizeText(title);
   if (!text || text.length < 2 || text.length > 160) return false;
-  if (/^(赞|评论|收藏|分享|更多|登录|打开APP|小红书|关注|已关注)$/i.test(text)) return false;
-  if (/^\d+(\.\d+)?[万wWkK]?$/.test(text)) return false;
+  if (/^(\u8d5e|\u8bc4\u8bba|\u6536\u85cf|\u5206\u4eab|\u66f4\u591a|\u767b\u5f55|\u6253\u5f00APP|\u5c0f\u7ea2\u4e66|\u5173\u6ce8|\u5df2\u5173\u6ce8)$/i.test(text)) return false;
+  if (/^\d+(\.\d+)?[\u4e07wWkK]?$/.test(text)) return false;
   return true;
 }
 
@@ -358,7 +427,7 @@ function collectVisibleNotes() {
     const href = resolveNoteHref(link);
     if (!isCollectedHref(href)) continue;
     const card = link.closest('section.note-item, .note-item, [class*="note-item"], [class*="NoteItem"], [data-note-id], [data-id], article, li, section') || link;
-    const title = extractTitle(card, link) || (extractNoteId(href) ? `笔记 ${extractNoteId(href)}` : "");
+    const title = extractTitle(card, link) || (extractNoteId(href) ? `\u7b14\u8bb0 ${extractNoteId(href)}` : "");
     if (!titleLooksValid(title)) continue;
     notes.push({ title, href, noteId: extractNoteId(href), isCollected: true });
   }
@@ -366,7 +435,7 @@ function collectVisibleNotes() {
 }
 
 async function scanCollectedNotes(config, onProgress = () => {}) {
-  if (!isFavNotePage()) throw new Error("请先切换到收藏页的笔记子分类后再运行。");
+  if (!isFavNotePage()) throw new Error("\u8bf7\u5148\u5207\u6362\u5230\u6536\u85cf\u9875\u7684\u7b14\u8bb0\u5b50\u5206\u7c7b\u540e\u518d\u8fd0\u884c\u3002");
 
   const originalY = window.scrollY;
   const limit = Math.max(1, Number(config.maxTitlesForPrompt) || 500);
@@ -380,11 +449,11 @@ async function scanCollectedNotes(config, onProgress = () => {}) {
 
   for (let round = 0; round < maxRounds; round += 1) {
     if (notes.length >= limit) {
-      onProgress(58, `已达到标题选择上限 ${limit}，停止滚动`);
+      onProgress(58, `\u5df2\u8fbe\u5230\u6807\u9898\u9009\u62e9\u4e0a\u9650 ${limit}\uff0c\u505c\u6b62\u6eda\u52a8`);
       break;
     }
 
-    onProgress(Math.min(58, 10 + (round / Math.max(1, maxRounds)) * 48), `正在滚动收藏笔记，已捕获 ${notes.length}/${limit} 个标题`);
+    onProgress(Math.min(58, 10 + (round / Math.max(1, maxRounds)) * 48), `\u6b63\u5728\u6eda\u52a8\u6536\u85cf\u7b14\u8bb0\uff0c\u5df2\u6355\u83b7 ${notes.length}/${limit} \u4e2a\u6807\u9898`);
     window.scrollBy({ top: Math.max(520, Math.floor(window.innerHeight * config.scrollStepRatio)), behavior: "smooth" });
     await sleep(config.scrollDelay);
 
@@ -406,7 +475,7 @@ async function scanCollectedNotes(config, onProgress = () => {}) {
   }
 
   window.scrollTo({ top: originalY, behavior: "smooth" });
-  logger.debug("扫描收藏笔记完成", { count: notes.length, limit });
+  logger.debug("\u626b\u63cf\u6536\u85cf\u7b14\u8bb0\u5b8c\u6210", { count: notes.length, limit });
   return notes;
 }
 
@@ -429,15 +498,15 @@ function readAlbumsFromDom() {
     const anchor = element.matches?.('a[href*="/board/"]') ? element : element.querySelector?.('a[href*="/board/"]');
     const id = extractBoardId(anchor?.href || anchor?.getAttribute?.("href"));
     const nameNode = element.querySelector?.('.board-name, [class*="board-name"], .name, [class*="name"]');
-    const name = normalizeText(nameNode?.textContent || element.textContent).replace(/\s*笔记\s*・?\s*\d+.*$/i, "");
-    if (!name || /创建专辑|编辑专辑/.test(name)) continue;
+    const name = normalizeText(nameNode?.textContent || element.textContent).replace(/\s*\u7b14\u8bb0\s*\u30fb?\s*\d+.*$/i, "");
+    if (!name || /\u521b\u5efa\u4e13\u8f91|\u7f16\u8f91\u4e13\u8f91/.test(name)) continue;
     if (!albums.has(name)) albums.set(name, { id, name });
     else if (id && !albums.get(name).id) albums.get(name).id = id;
   }
 
   for (const node of Array.from(document.querySelectorAll('.board-name, .board-card .board-name, [class*="board-name"]'))) {
-    const name = normalizeText(node.textContent).replace(/\s*笔记\s*・?\s*\d+.*$/i, "");
-    if (name && !albums.has(name) && !/创建专辑|编辑专辑/.test(name)) albums.set(name, { id: "", name });
+    const name = normalizeText(node.textContent).replace(/\s*\u7b14\u8bb0\s*\u30fb?\s*\d+.*$/i, "");
+    if (name && !albums.has(name) && !/\u521b\u5efa\u4e13\u8f91|\u7f16\u8f91\u4e13\u8f91/.test(name)) albums.set(name, { id: "", name });
   }
 
   return Array.from(albums.values());
@@ -459,7 +528,7 @@ async function readExistingAlbums(config, onProgress = () => {}) {
       else if (album.id && !albums.get(album.name).id) albums.get(album.name).id = album.id;
     }
 
-    onProgress(Math.min(30, 10 + round), `正在读取已有专辑，已发现 ${albums.size} 个`);
+    onProgress(Math.min(30, 10 + round), `\u6b63\u5728\u8bfb\u53d6\u5df2\u6709\u4e13\u8f91\uff0c\u5df2\u53d1\u73b0 ${albums.size} \u4e2a`);
     stableRounds = albums.size === previousCount ? stableRounds + 1 : 0;
     previousCount = albums.size;
 
@@ -474,24 +543,24 @@ async function readExistingAlbums(config, onProgress = () => {}) {
   await sleep(350);
 
   const result = Array.from(albums.values());
-  logger.debug("读取已有专辑完成", { count: result.length, albums: result.slice(0, 20) });
+  logger.debug("\u8bfb\u53d6\u5df2\u6709\u4e13\u8f91\u5b8c\u6210", { count: result.length, albums: result.slice(0, 20) });
   return result;
 }
 
 function albumIntro(album) {
   if (album.intro) return normalizeText(album.intro).slice(0, 140);
-  const sample = (album.titles || []).slice(0, 3).join("、");
-  return `由收藏笔记智能归类生成，包含 ${album.count || (album.titles || []).length || 0} 篇相关内容${sample ? `：${sample}` : ""}。`.slice(0, 140);
+  const sample = (album.titles || []).slice(0, 3).join("\u3001");
+  return `\u7531\u6536\u85cf\u7b14\u8bb0\u667a\u80fd\u5f52\u7c7b\u751f\u6210\uff0c\u5305\u542b ${album.count || (album.titles || []).length || 0} \u7bc7\u76f8\u5173\u5185\u5bb9${sample ? `\uff1a${sample}` : ""}\u3002`.slice(0, 140);
 }
 
 async function openCreateAlbumDialog() {
-  let button = findVisible(".create-board, button, div, a", (text) => text === "创建专辑" || text === "创建");
+  let button = findVisible(".create-board, button, div, a", (text) => text === "\u521b\u5efa\u4e13\u8f91" || text === "\u521b\u5efa");
   if (!button) {
     window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
     await sleep(700);
-    button = findVisible(".create-board, button, div, a", (text) => text === "创建专辑" || text === "创建");
+    button = findVisible(".create-board, button, div, a", (text) => text === "\u521b\u5efa\u4e13\u8f91" || text === "\u521b\u5efa");
   }
-  if (!button) throw new Error("没有找到“创建专辑”入口");
+  if (!button) throw new Error("\u6ca1\u6709\u627e\u5230\u201c\u521b\u5efa\u4e13\u8f91\u201d\u5165\u53e3");
 
   button.scrollIntoView({ block: "center", inline: "center" });
   await sleep(120);
@@ -512,15 +581,15 @@ async function createAlbumViaUi(album, publicAlbum) {
   const modal = await openCreateAlbumDialog();
   const titleInput = findAlbumTitleInput(modal);
   const introInput = findAlbumIntroInput(modal);
-  if (!titleInput) throw new Error("没有找到专辑标题输入框");
+  if (!titleInput) throw new Error("\u6ca1\u6709\u627e\u5230\u4e13\u8f91\u6807\u9898\u8f93\u5165\u6846");
 
   setInputValue(titleInput, album.name);
   if (introInput) setInputValue(introInput, albumIntro(album));
   setAlbumVisibility(modal, publicAlbum);
   await sleep(240);
 
-  const done = Array.from(modal.querySelectorAll(".btn.done, button, div")).find((element) => isVisible(element) && normalizeText(element.textContent) === "完成");
-  if (!done) throw new Error("没有找到完成按钮");
+  const done = Array.from(modal.querySelectorAll(".btn.done, button, div")).find((element) => isVisible(element) && normalizeText(element.textContent) === "\u5b8c\u6210");
+  if (!done) throw new Error("\u6ca1\u6709\u627e\u5230\u5b8c\u6210\u6309\u94ae");
 
   fireClick(done);
   await waitFor(() => !Array.from(document.querySelectorAll(xhsModalSelector)).some((element) => {
@@ -534,14 +603,14 @@ function findAlbumTitleInput(modal) {
     'input.input-content',
     'input[type="text"]',
     "input:not([type])",
-    'input[placeholder*="专辑"]',
-    'input[placeholder*="标题"]',
-    'input[placeholder*="名称"]'
+    'input[placeholder*="\u4e13\u8f91"]',
+    'input[placeholder*="\u6807\u9898"]',
+    'input[placeholder*="\u540d\u79f0"]'
   ].join(", ")));
   return candidates.find((element) => {
     const placeholder = normalizeText(element.getAttribute("placeholder"));
     const type = normalizeText(element.getAttribute("type")).toLowerCase();
-    return isVisible(element) && type !== "hidden" && !/搜索|search/i.test(placeholder);
+    return isVisible(element) && type !== "hidden" && !/\u641c\u7d22|search/i.test(placeholder);
   }) || candidates.find(isVisible) || null;
 }
 
@@ -549,12 +618,12 @@ function findAlbumIntroInput(modal) {
   return Array.from(modal.querySelectorAll([
     "textarea.textarea-content",
     "textarea",
-    'input[placeholder*="简介"]',
-    'input[placeholder*="介绍"]',
+    'input[placeholder*="\u7b80\u4ecb"]',
+    'input[placeholder*="\u4ecb\u7ecd"]',
     '[contenteditable="true"]'
   ].join(", "))).find((element) => {
     const placeholder = normalizeText(element.getAttribute("placeholder"));
-    return isVisible(element) && !/搜索|search/i.test(placeholder);
+    return isVisible(element) && !/\u641c\u7d22|search/i.test(placeholder);
   }) || null;
 }
 
@@ -563,14 +632,16 @@ async function createAlbums(plan, existingAlbums, publicAlbum, config, onProgres
   await sleep(800);
 
   const existingNames = new Set(existingAlbums.map((album) => album.name || album).filter(Boolean));
+  const existingKeys = new Set(Array.from(existingNames).map(categoryKey).filter(Boolean));
   const result = { created: [], skipped: [], failed: [] };
-  const categories = (plan.categories || []).filter((album) => !album.isOther);
+  const categories = (plan.categories || []).filter(isRegularCategory);
 
   for (let index = 0; index < categories.length; index += 1) {
     const album = categories[index];
-    onProgress(18 + Math.round((index / Math.max(1, categories.length)) * 72), `正在处理 ${index + 1}/${categories.length}：${album.name}`);
+    onProgress(18 + Math.round((index / Math.max(1, categories.length)) * 72), `\u6b63\u5728\u5904\u7406 ${index + 1}/${categories.length}\uff1a${album.name}`);
 
-    if (existingNames.has(album.name)) {
+    const key = categoryKey(album.name);
+    if (existingNames.has(album.name) || existingKeys.has(key)) {
       result.skipped.push(album.name);
       continue;
     }
@@ -579,35 +650,24 @@ async function createAlbums(plan, existingAlbums, publicAlbum, config, onProgres
       await createAlbumViaUi(album, publicAlbum);
       result.created.push(album.name);
       existingNames.add(album.name);
+      existingKeys.add(key);
     } catch (error) {
       result.failed.push({ name: album.name, error: error.message || String(error) });
-      logger.error(`创建专辑失败：${album.name}`, error);
+      logger.error(`\u521b\u5efa\u4e13\u8f91\u5931\u8d25\uff1a${album.name}`, error);
     }
   }
 
-  logger.debug("创建专辑结果", result);
+  logger.debug("\u521b\u5efa\u4e13\u8f91\u7ed3\u679c", result);
   return result;
 }
 
 
 // ---- src/classifier.js ----
 
-function isOtherName(name) {
-  return /^(其他|未分类|杂项|其它|其他收藏)$/i.test(normalizeText(name));
-}
-
-function categoryKey(name) {
-  return normalizeText(name).replace(/[《》"'`]/g, "").toLowerCase();
-}
-
-function cleanCategoryName(name, index) {
-  return normalizeText(name).replace(/[《》"'`]/g, "").slice(0, 18) || `分类${index + 1}`;
-}
-
 function introFor(category) {
   if (category.intro) return normalizeText(category.intro).slice(0, 140);
-  const sample = (category.titles || []).slice(0, 3).join("、");
-  return `由收藏笔记智能归类生成，包含 ${category.count || (category.titles || []).length || 0} 篇相关内容${sample ? `：${sample}` : ""}。`.slice(0, 140);
+  const sample = (category.titles || []).slice(0, 3).join("\u3001");
+  return `\u7531\u6536\u85cf\u7b14\u8bb0\u667a\u80fd\u5f52\u7c7b\u751f\u6210\uff0c\u5305\u542b ${category.count || (category.titles || []).length || 0} \u7bc7\u76f8\u5173\u5185\u5bb9${sample ? `\uff1a${sample}` : ""}\u3002`.slice(0, 140);
 }
 
 function appendTitle(category, title) {
@@ -623,7 +683,7 @@ function appendTitle(category, title) {
 }
 
 function usedRegularCount(categoryMap) {
-  return Array.from(categoryMap.values()).filter((category) => !isOtherName(category.name) && (category.titles?.length || !category.isExisting)).length;
+  return Array.from(categoryMap.values()).filter((category) => isRegularCategory(category) && (category.titles?.length || !category.isExisting)).length;
 }
 
 function canAddCategory(categoryMap, config) {
@@ -638,7 +698,7 @@ function createExistingCategoryMap(existingAlbumNames, config) {
     if (!name || isOtherName(name)) continue;
     const key = categoryKey(name);
     if (!map.has(key)) {
-      map.set(key, { name, title: name, intro: "已有小红书专辑，优先复用。", count: 0, titles: [], isExisting: true });
+      map.set(key, { name, title: name, intro: "\u5df2\u6709\u5c0f\u7ea2\u4e66\u4e13\u8f91\uff0c\u4f18\u5148\u590d\u7528\u3002", count: 0, titles: [], isExisting: true });
     }
   }
   return map;
@@ -647,26 +707,26 @@ function createExistingCategoryMap(existingAlbumNames, config) {
 function localCategoryForTitle(title, granularity) {
   const text = normalizeText(title);
   const fineRules = [
-    ["西藏旅行", ["西藏", "拉萨", "阿里", "川藏", "波密", "藏东", "冰川", "喜马拉雅", "318"]],
-    ["新疆路线", ["新疆", "阿勒泰", "伊犁", "赛里木湖", "禾木", "喀纳斯", "安集海"]],
-    ["日本旅行", ["日本", "东京", "大阪", "京都", "北海道", "富士"]],
-    ["海滨城市", ["威海", "蓝眼泪", "海边", "海滨"]],
-    ["美食", ["美食", "餐厅", "咖啡", "甜品", "火锅", "烧烤", "菜谱", "食谱"]],
-    ["穿搭美妆", ["穿搭", "妆", "口红", "护肤", "发型", "香水"]],
-    ["学习工作", ["学习", "论文", "英语", "考研", "工作", "效率", "笔记"]],
-    ["家居生活", ["家居", "装修", "收纳", "房间", "租房"]],
-    ["机位与拍照", ["机位", "拍照", "摄影", "滤镜", "壁纸", "live"]]
+    ["\u897f\u85cf\u65c5\u884c", ["\u897f\u85cf", "\u62c9\u8428", "\u963f\u91cc", "\u5ddd\u85cf", "\u6ce2\u5bc6", "\u85cf\u4e1c", "\u51b0\u5ddd", "\u559c\u9a6c\u62c9\u96c5", "318"]],
+    ["\u65b0\u7586\u8def\u7ebf", ["\u65b0\u7586", "\u963f\u52d2\u6cf0", "\u4f0a\u7281", "\u8d5b\u91cc\u6728\u6e56", "\u79be\u6728", "\u5580\u7eb3\u65af", "\u5b89\u96c6\u6d77"]],
+    ["\u65e5\u672c\u65c5\u884c", ["\u65e5\u672c", "\u4e1c\u4eac", "\u5927\u962a", "\u4eac\u90fd", "\u5317\u6d77\u9053", "\u5bcc\u58eb"]],
+    ["\u6d77\u6ee8\u57ce\u5e02", ["\u5a01\u6d77", "\u84dd\u773c\u6cea", "\u6d77\u8fb9", "\u6d77\u6ee8"]],
+    ["\u7f8e\u98df", ["\u7f8e\u98df", "\u9910\u5385", "\u5496\u5561", "\u751c\u54c1", "\u706b\u9505", "\u70e7\u70e4", "\u83dc\u8c31", "\u98df\u8c31"]],
+    ["\u7a7f\u642d\u7f8e\u5986", ["\u7a7f\u642d", "\u5986", "\u53e3\u7ea2", "\u62a4\u80a4", "\u53d1\u578b", "\u9999\u6c34"]],
+    ["\u5b66\u4e60\u5de5\u4f5c", ["\u5b66\u4e60", "\u8bba\u6587", "\u82f1\u8bed", "\u8003\u7814", "\u5de5\u4f5c", "\u6548\u7387", "\u7b14\u8bb0"]],
+    ["\u5bb6\u5c45\u751f\u6d3b", ["\u5bb6\u5c45", "\u88c5\u4fee", "\u6536\u7eb3", "\u623f\u95f4", "\u79df\u623f"]],
+    ["\u673a\u4f4d\u4e0e\u62cd\u7167", ["\u673a\u4f4d", "\u62cd\u7167", "\u6444\u5f71", "\u6ee4\u955c", "\u58c1\u7eb8", "live"]]
   ];
   const coarseRules = [
-    ["旅行", ["旅行", "旅游", "西藏", "拉萨", "阿里", "川藏", "新疆", "阿勒泰", "伊犁", "威海", "日本", "泰国", "国外", "海外", "海边", "攻略", "路线", "景点"]],
-    ["美食", ["美食", "餐厅", "咖啡", "甜品", "火锅", "烧烤", "菜谱", "食谱"]],
-    ["穿搭美妆", ["穿搭", "妆", "口红", "护肤", "发型", "香水"]],
-    ["学习工作", ["学习", "论文", "英语", "考研", "工作", "效率", "笔记"]],
-    ["家居生活", ["家居", "装修", "收纳", "房间", "租房"]],
-    ["拍照机位", ["机位", "拍照", "摄影", "滤镜", "壁纸", "live"]]
+    ["\u65c5\u884c", ["\u65c5\u884c", "\u65c5\u6e38", "\u897f\u85cf", "\u62c9\u8428", "\u963f\u91cc", "\u5ddd\u85cf", "\u65b0\u7586", "\u963f\u52d2\u6cf0", "\u4f0a\u7281", "\u5a01\u6d77", "\u65e5\u672c", "\u6cf0\u56fd", "\u56fd\u5916", "\u6d77\u5916", "\u6d77\u8fb9", "\u653b\u7565", "\u8def\u7ebf", "\u666f\u70b9"]],
+    ["\u7f8e\u98df", ["\u7f8e\u98df", "\u9910\u5385", "\u5496\u5561", "\u751c\u54c1", "\u706b\u9505", "\u70e7\u70e4", "\u83dc\u8c31", "\u98df\u8c31"]],
+    ["\u7a7f\u642d\u7f8e\u5986", ["\u7a7f\u642d", "\u5986", "\u53e3\u7ea2", "\u62a4\u80a4", "\u53d1\u578b", "\u9999\u6c34"]],
+    ["\u5b66\u4e60\u5de5\u4f5c", ["\u5b66\u4e60", "\u8bba\u6587", "\u82f1\u8bed", "\u8003\u7814", "\u5de5\u4f5c", "\u6548\u7387", "\u7b14\u8bb0"]],
+    ["\u5bb6\u5c45\u751f\u6d3b", ["\u5bb6\u5c45", "\u88c5\u4fee", "\u6536\u7eb3", "\u623f\u95f4", "\u79df\u623f"]],
+    ["\u62cd\u7167\u673a\u4f4d", ["\u673a\u4f4d", "\u62cd\u7167", "\u6444\u5f71", "\u6ee4\u955c", "\u58c1\u7eb8", "live"]]
   ];
   const rules = granularity === "fine" ? fineRules : coarseRules;
-  return rules.find(([, keys]) => keys.some((key) => text.includes(key)))?.[0] || "其他";
+  return rules.find(([, keys]) => keys.some((key) => text.includes(key)))?.[0] || OTHER_CATEGORY_NAME;
 }
 
 function assignLocally(batch, categoryMap, otherCategory, granularity, config) {
@@ -690,7 +750,7 @@ function assignLocally(batch, categoryMap, otherCategory, granularity, config) {
 }
 
 function parseJsonLoose(value) {
-  if (!value) throw new Error("LLMBridge 返回为空");
+  if (!value) throw new Error("LLMBridge \u8fd4\u56de\u4e3a\u7a7a");
   if (typeof value === "object") return value;
   const text = String(value).trim();
   try {
@@ -707,7 +767,7 @@ function parseJsonLoose(value) {
 
 async function callLlm(prompt, config) {
   if (!window.LLMBridge || typeof window.LLMBridge.chat !== "function") {
-    throw new Error("LLMBridge 不存在");
+    throw new Error("LLMBridge \u4e0d\u5b58\u5728");
   }
 
   let timer = null;
@@ -715,7 +775,7 @@ async function callLlm(prompt, config) {
     const result = await Promise.race([
       window.LLMBridge.chat(prompt, "json"),
       new Promise((_, reject) => {
-        timer = setTimeout(() => reject(new Error(`LLMBridge 分批分析超过 ${Math.round(config.llmBatchTimeoutMs / 1000)} 秒`)), config.llmBatchTimeoutMs);
+        timer = setTimeout(() => reject(new Error(`LLMBridge \u5206\u6279\u5206\u6790\u8d85\u8fc7 ${Math.round(config.llmBatchTimeoutMs / 1000)} \u79d2`)), config.llmBatchTimeoutMs);
       })
     ]);
     return parseJsonLoose(result);
@@ -734,31 +794,31 @@ function buildPrompt(batch, categoryMap, batchIndex, batchCount, granularity, co
   const contextText = context.length
     ? context.map((category, index) => {
         const sample = (category.titles || []).slice(0, 2).map((title) => normalizeText(title).slice(0, 28)).join(" / ");
-        return `${index + 1}. ${category.name}${category.isExisting ? "（已有专辑）" : "（新增分类）"}${sample ? `；已归类示例：${sample}` : ""}`;
+        return `${index + 1}. ${category.name}${category.isExisting ? "\uff08\u5df2\u6709\u4e13\u8f91\uff09" : "\uff08\u65b0\u589e\u5206\u7c7b\uff09"}${sample ? `\uff1b\u5df2\u5f52\u7c7b\u793a\u4f8b\uff1a${sample}` : ""}`;
       }).join("\n")
-    : "暂无已有分类。";
+    : "\u6682\u65e0\u5df2\u6709\u5206\u7c7b\u3002";
 
   const remaining = Math.max(0, config.maxCategories - usedRegularCount(categoryMap));
   const granularityInstruction =
     granularity === "fine"
-      ? "当前为细粒度：允许按国家、城市、地区、路线、内容主题继续拆分。例如“日本旅行”和“泰国旅行”可以分别归为“日本旅行”“泰国旅行”；但仍要避免为单篇标题单独建类。"
-      : "当前为粗粒度：优先合并为更大的通用主题，不按国家、城市或路线过度拆分。例如“日本旅行”“泰国旅行”“新疆旅行”应优先合并为“旅行”；只有主题明显不同才拆分。";
+      ? "\u5f53\u524d\u4e3a\u7ec6\u7c92\u5ea6\uff1a\u5141\u8bb8\u6309\u56fd\u5bb6\u3001\u57ce\u5e02\u3001\u5730\u533a\u3001\u8def\u7ebf\u3001\u5185\u5bb9\u4e3b\u9898\u7ee7\u7eed\u62c6\u5206\u3002\u4f8b\u5982\u201c\u65e5\u672c\u65c5\u884c\u201d\u548c\u201c\u6cf0\u56fd\u65c5\u884c\u201d\u53ef\u4ee5\u5206\u522b\u5f52\u4e3a\u201c\u65e5\u672c\u65c5\u884c\u201d\u201c\u6cf0\u56fd\u65c5\u884c\u201d\uff1b\u4f46\u4ecd\u8981\u907f\u514d\u4e3a\u5355\u7bc7\u6807\u9898\u5355\u72ec\u5efa\u7c7b\u3002"
+      : "\u5f53\u524d\u4e3a\u7c97\u7c92\u5ea6\uff1a\u4f18\u5148\u5408\u5e76\u4e3a\u66f4\u5927\u7684\u901a\u7528\u4e3b\u9898\uff0c\u4e0d\u6309\u56fd\u5bb6\u3001\u57ce\u5e02\u6216\u8def\u7ebf\u8fc7\u5ea6\u62c6\u5206\u3002\u4f8b\u5982\u201c\u65e5\u672c\u65c5\u884c\u201d\u201c\u6cf0\u56fd\u65c5\u884c\u201d\u201c\u65b0\u7586\u65c5\u884c\u201d\u5e94\u4f18\u5148\u5408\u5e76\u4e3a\u201c\u65c5\u884c\u201d\uff1b\u53ea\u6709\u4e3b\u9898\u660e\u663e\u4e0d\u540c\u624d\u62c6\u5206\u3002";
   const addInstruction =
     remaining > 0
       ? granularity === "fine"
-        ? "只有当标题无法自然归入现有分类时，才可以新增更具体分类；新增分类名可以按国家、城市、地区、路线或明确主题拆分，但不要为单篇标题单独建类。"
-        : "只有当标题无法自然归入现有分类时，才可以新增宽泛分类；新增分类名要适合作为专辑标题，简短自然，不要太细。"
-      : "常规分类已达到上限，禁止新增常规分类；无法归入现有分类的标题必须放入“其他”。";
+        ? "\u53ea\u6709\u5f53\u6807\u9898\u65e0\u6cd5\u81ea\u7136\u5f52\u5165\u73b0\u6709\u5206\u7c7b\u65f6\uff0c\u624d\u53ef\u4ee5\u65b0\u589e\u66f4\u5177\u4f53\u5206\u7c7b\uff1b\u65b0\u589e\u5206\u7c7b\u540d\u53ef\u4ee5\u6309\u56fd\u5bb6\u3001\u57ce\u5e02\u3001\u5730\u533a\u3001\u8def\u7ebf\u6216\u660e\u786e\u4e3b\u9898\u62c6\u5206\uff0c\u4f46\u4e0d\u8981\u4e3a\u5355\u7bc7\u6807\u9898\u5355\u72ec\u5efa\u7c7b\u3002"
+        : "\u53ea\u6709\u5f53\u6807\u9898\u65e0\u6cd5\u81ea\u7136\u5f52\u5165\u73b0\u6709\u5206\u7c7b\u65f6\uff0c\u624d\u53ef\u4ee5\u65b0\u589e\u5bbd\u6cdb\u5206\u7c7b\uff1b\u65b0\u589e\u5206\u7c7b\u540d\u8981\u9002\u5408\u4f5c\u4e3a\u4e13\u8f91\u6807\u9898\uff0c\u7b80\u77ed\u81ea\u7136\uff0c\u4e0d\u8981\u592a\u7ec6\u3002"
+      : "\u5e38\u89c4\u5206\u7c7b\u5df2\u8fbe\u5230\u4e0a\u9650\uff0c\u7981\u6b62\u65b0\u589e\u5e38\u89c4\u5206\u7c7b\uff1b\u65e0\u6cd5\u5f52\u5165\u73b0\u6709\u5206\u7c7b\u7684\u6807\u9898\u5fc5\u987b\u653e\u5165\u201c\u5176\u4ed6\u201d\u3002";
   const titles = batch.map((note, index) => `${index + 1}. ${note.title}`).join("\n");
 
   return [
-    "你是小红书收藏整理助手。现在按批次整理用户收藏笔记标题，并维护一组稳定的小红书专辑分类。",
-    `这是第 ${batchIndex + 1}/${batchCount} 批，每批最多 ${config.classificationBatchSize} 个标题。${granularityInstruction}`,
-    `当前已有/已新增的常规分类如下。请优先复用这些分类，不要因为表达略有差异就新增分类：\n${contextText}`,
-    `常规分类总上限为 ${config.maxCategories} 个，当前已有 ${usedRegularCount(categoryMap)} 个已使用分类，还可以新增 ${remaining} 个。`,
+    "\u4f60\u662f\u5c0f\u7ea2\u4e66\u6536\u85cf\u6574\u7406\u52a9\u624b\u3002\u73b0\u5728\u6309\u6279\u6b21\u6574\u7406\u7528\u6237\u6536\u85cf\u7b14\u8bb0\u6807\u9898\uff0c\u5e76\u7ef4\u62a4\u4e00\u7ec4\u7a33\u5b9a\u7684\u5c0f\u7ea2\u4e66\u4e13\u8f91\u5206\u7c7b\u3002",
+    `\u8fd9\u662f\u7b2c ${batchIndex + 1}/${batchCount} \u6279\uff0c\u6bcf\u6279\u6700\u591a ${config.classificationBatchSize} \u4e2a\u6807\u9898\u3002${granularityInstruction}`,
+    `\u5f53\u524d\u5df2\u6709/\u5df2\u65b0\u589e\u7684\u5e38\u89c4\u5206\u7c7b\u5982\u4e0b\u3002\u8bf7\u4f18\u5148\u590d\u7528\u8fd9\u4e9b\u5206\u7c7b\uff0c\u4e0d\u8981\u56e0\u4e3a\u8868\u8fbe\u7565\u6709\u5dee\u5f02\u5c31\u65b0\u589e\u5206\u7c7b\uff1a\n${contextText}`,
+    `\u5e38\u89c4\u5206\u7c7b\u603b\u4e0a\u9650\u4e3a ${config.maxCategories} \u4e2a\uff0c\u5f53\u524d\u5df2\u6709 ${usedRegularCount(categoryMap)} \u4e2a\u5df2\u4f7f\u7528\u5206\u7c7b\uff0c\u8fd8\u53ef\u4ee5\u65b0\u589e ${remaining} \u4e2a\u3002`,
     addInstruction,
-    "只做本批标题到分类名的映射，不要解释，不要复述标题全文。每个序号必须且只能归入一个分类。无法可靠归入常规分类的序号放入“其他”。",
-    '只返回 JSON，结构：{"items":[{"i":1,"name":"已有或新增专辑标题"}]}。i 是标题序号，name 是分类名。',
+    "\u53ea\u505a\u672c\u6279\u6807\u9898\u5230\u5206\u7c7b\u540d\u7684\u6620\u5c04\uff0c\u4e0d\u8981\u89e3\u91ca\uff0c\u4e0d\u8981\u590d\u8ff0\u6807\u9898\u5168\u6587\u3002\u6bcf\u4e2a\u5e8f\u53f7\u5fc5\u987b\u4e14\u53ea\u80fd\u5f52\u5165\u4e00\u4e2a\u5206\u7c7b\u3002\u65e0\u6cd5\u53ef\u9760\u5f52\u5165\u5e38\u89c4\u5206\u7c7b\u7684\u5e8f\u53f7\u653e\u5165\u201c\u5176\u4ed6\u201d\u3002",
+    '\u53ea\u8fd4\u56de JSON\uff0c\u7ed3\u6784\uff1a{"items":[{"i":1,"name":"\u5df2\u6709\u6216\u65b0\u589e\u4e13\u8f91\u6807\u9898"}]}\u3002i \u662f\u6807\u9898\u5e8f\u53f7\uff0cname \u662f\u5206\u7c7b\u540d\u3002',
     "",
     titles
   ].join("\n");
@@ -776,10 +836,10 @@ function applyLlmAssignments(batch, payload, categoryMap, otherCategory, config)
     if (!note || !title || !rawName || handled.has(title)) continue;
 
     let category = otherCategory;
-    if (!isOtherName(rawName)) {
-      const key = categoryKey(rawName);
+    const name = cleanCategoryName(rawName, categoryMap.size);
+    if (!isOtherName(name)) {
+      const key = categoryKey(name);
       if (!categoryMap.has(key) && canAddCategory(categoryMap, config)) {
-        const name = cleanCategoryName(rawName, categoryMap.size);
         categoryMap.set(key, { name, title: name, intro: "", count: 0, titles: [], isExisting: false });
       }
       category = categoryMap.get(key) || otherCategory;
@@ -804,11 +864,11 @@ async function classifyNotes(notes, existingAlbumNames, options, onProgress = ()
   for (let index = 0; index < selected.length; index += batchSize) batches.push(selected.slice(index, index + batchSize));
 
   const categoryMap = createExistingCategoryMap(existingAlbumNames, config);
-  const otherCategory = { name: "其他", title: "其他", intro: "未能可靠归入上述分类的收藏笔记，作为备注保留。", count: 0, titles: [], isOther: true };
+  const otherCategory = { name: OTHER_CATEGORY_NAME, title: OTHER_CATEGORY_NAME, intro: "\u672a\u80fd\u53ef\u9760\u5f52\u5165\u4e0a\u8ff0\u5206\u7c7b\u7684\u6536\u85cf\u7b14\u8bb0\uff0c\u4f5c\u4e3a\u5907\u6ce8\u4fdd\u7559\u3002", count: 0, titles: [], isOther: true };
   state.assignmentCache = new Map();
 
   for (let index = 0; index < batches.length; index += 1) {
-    onProgress(Math.min(90, 64 + Math.round((index / Math.max(1, batches.length)) * 25)), `正在按${granularity === "fine" ? "细粒度" : "粗粒度"}分批分析 ${index + 1}/${batches.length}`);
+    onProgress(Math.min(90, 64 + Math.round((index / Math.max(1, batches.length)) * 25)), `\u6b63\u5728\u6309${granularity === "fine" ? "\u7ec6\u7c92\u5ea6" : "\u7c97\u7c92\u5ea6"}\u5206\u6279\u5206\u6790 ${index + 1}/${batches.length}`);
 
     const batch = batches[index];
     if (!window.LLMBridge || typeof window.LLMBridge.chat !== "function") {
@@ -824,14 +884,14 @@ async function classifyNotes(notes, existingAlbumNames, options, onProgress = ()
         assignLocally(batch, categoryMap, otherCategory, granularity, config);
       }
     } catch (error) {
-      logger.warn("LLM 分批分类失败，使用本地兜底", { error: errorMessage(error), detail: errorDetail(error) });
+      logger.warn("LLM \u5206\u6279\u5206\u7c7b\u5931\u8d25\uff0c\u4f7f\u7528\u672c\u5730\u515c\u5e95", { error: errorMessage(error), detail: errorDetail(error) });
       assignLocally(batch, categoryMap, otherCategory, granularity, config);
     }
     await sleep(80);
   }
 
   const categories = Array.from(categoryMap.values())
-    .filter((category) => category.titles.length)
+    .filter((category) => category.titles.length && isRegularCategory(category))
     .map((category) => ({ ...category, intro: introFor(category), count: category.titles.length }));
   if (otherCategory.titles.length) categories.push({ ...otherCategory, intro: introFor(otherCategory), count: otherCategory.titles.length });
 
@@ -845,7 +905,7 @@ async function classifyNotes(notes, existingAlbumNames, options, onProgress = ()
     existingAlbumCount: existingAlbumNames.length,
     granularity
   };
-  logger.debug("分类结果", plan);
+  logger.debug("\u5206\u7c7b\u7ed3\u679c", plan);
   return plan;
 }
 
@@ -856,17 +916,9 @@ function compactTitle(title) {
   return normalizeText(title).toLowerCase().replace(/\s+/g, "");
 }
 
-function isOtherName(name) {
-  return /^(其他|未分类|杂项|其它|其他收藏)$/i.test(normalizeText(name));
-}
-
-function cleanCategoryName(name, index) {
-  return normalizeText(name).replace(/[《》"'`]/g, "").slice(0, 18) || `分类${index + 1}`;
-}
-
 function categoryIntro(category) {
-  const sample = (category.titles || []).slice(0, 3).join("、");
-  return `由收藏笔记智能归类生成，包含 ${category.count || (category.titles || []).length || 0} 篇相关内容${sample ? `：${sample}` : ""}。`.slice(0, 140);
+  const sample = (category.titles || []).slice(0, 3).join("\u3001");
+  return `\u7531\u6536\u85cf\u7b14\u8bb0\u667a\u80fd\u5f52\u7c7b\u751f\u6210\uff0c\u5305\u542b ${category.count || (category.titles || []).length || 0} \u7bc7\u76f8\u5173\u5185\u5bb9${sample ? `\uff1a${sample}` : ""}\u3002`.slice(0, 140);
 }
 
 function buildManualReviewPayload({ notes, existingAlbums, config, granularity }) {
@@ -877,16 +929,16 @@ function buildManualReviewPayload({ notes, existingAlbums, config, granularity }
     granularity,
     rules: [
       granularity === "fine"
-        ? "细粒度：可以按国家、城市、地区、路线或明确主题拆分，例如日本旅行、新疆路线。"
-        : "粗粒度：优先合并为通用主题，例如日本旅行、泰国旅行、新疆旅行尽量合并为旅行。",
-      `常规分类上限为 ${config.maxCategories} 个；无法可靠归类的放入“其他”。`,
-      "优先复用 existingAlbums 中已有专辑名。",
-      "每个序号必须且只能归入一个分类。"
+        ? "\u7ec6\u7c92\u5ea6\uff1a\u53ef\u4ee5\u6309\u56fd\u5bb6\u3001\u57ce\u5e02\u3001\u5730\u533a\u3001\u8def\u7ebf\u6216\u660e\u786e\u4e3b\u9898\u62c6\u5206\uff0c\u4f8b\u5982\u65e5\u672c\u65c5\u884c\u3001\u65b0\u7586\u8def\u7ebf\u3002"
+        : "\u7c97\u7c92\u5ea6\uff1a\u4f18\u5148\u5408\u5e76\u4e3a\u901a\u7528\u4e3b\u9898\uff0c\u4f8b\u5982\u65e5\u672c\u65c5\u884c\u3001\u6cf0\u56fd\u65c5\u884c\u3001\u65b0\u7586\u65c5\u884c\u5c3d\u91cf\u5408\u5e76\u4e3a\u65c5\u884c\u3002",
+      `\u5e38\u89c4\u5206\u7c7b\u4e0a\u9650\u4e3a ${config.maxCategories} \u4e2a\uff1b\u65e0\u6cd5\u53ef\u9760\u5f52\u7c7b\u7684\u653e\u5165\u201c\u5176\u4ed6\u201d\u3002`,
+      "\u4f18\u5148\u590d\u7528 existingAlbums \u4e2d\u5df2\u6709\u4e13\u8f91\u540d\u3002",
+      "\u6bcf\u4e2a\u5e8f\u53f7\u5fc5\u987b\u4e14\u53ea\u80fd\u5f52\u5165\u4e00\u4e2a\u5206\u7c7b\u3002"
     ],
     expectedOutput: {
       items: [
-        { i: 1, name: "旅行" },
-        { i: 2, name: "美食" }
+        { i: 1, name: "\u65c5\u884c" },
+        { i: 2, name: "\u7f8e\u98df" }
       ]
     },
     limits: {
@@ -906,15 +958,15 @@ function buildManualReviewPayload({ notes, existingAlbums, config, granularity }
 }
 
 function buildManualReviewPrompt(payload) {
-  const existing = payload.existingAlbums.length ? payload.existingAlbums.join("、") : "暂无";
+  const existing = payload.existingAlbums.length ? payload.existingAlbums.join("\u3001") : "\u6682\u65e0";
   const notes = payload.notes.map((note) => `${note.i}. ${note.title}`).join("\n");
   return [
-    "请帮我给小红书收藏笔记做专辑分类。",
-    `分类粒度：${payload.granularity === "fine" ? "细粒度" : "粗粒度"}`,
-    `常规分类上限：${payload.limits.maxCategories}`,
-    `已有专辑，优先复用：${existing}`,
-    "要求：每个序号必须且只能归入一个分类；无法可靠归类放入“其他”；只返回 JSON，不要解释。",
-    'JSON 格式：{"items":[{"i":1,"name":"旅行"},{"i":2,"name":"美食"}]}',
+    "\u8bf7\u5e2e\u6211\u7ed9\u5c0f\u7ea2\u4e66\u6536\u85cf\u7b14\u8bb0\u505a\u4e13\u8f91\u5206\u7c7b\u3002",
+    `\u5206\u7c7b\u7c92\u5ea6\uff1a${payload.granularity === "fine" ? "\u7ec6\u7c92\u5ea6" : "\u7c97\u7c92\u5ea6"}`,
+    `\u5e38\u89c4\u5206\u7c7b\u4e0a\u9650\uff1a${payload.limits.maxCategories}`,
+    `\u5df2\u6709\u4e13\u8f91\uff0c\u4f18\u5148\u590d\u7528\uff1a${existing}`,
+    "\u8981\u6c42\uff1a\u6bcf\u4e2a\u5e8f\u53f7\u5fc5\u987b\u4e14\u53ea\u80fd\u5f52\u5165\u4e00\u4e2a\u5206\u7c7b\uff1b\u65e0\u6cd5\u53ef\u9760\u5f52\u7c7b\u653e\u5165\u201c\u5176\u4ed6\u201d\uff1b\u53ea\u8fd4\u56de JSON\uff0c\u4e0d\u8981\u89e3\u91ca\u3002",
+    'JSON \u683c\u5f0f\uff1a{"items":[{"i":1,"name":"\u65c5\u884c"},{"i":2,"name":"\u7f8e\u98df"}]}',
     "",
     notes
   ].join("\n");
@@ -923,11 +975,11 @@ function buildManualReviewPrompt(payload) {
 function manualAssignmentsToPlan(input, notes, existingAlbums, config, granularity) {
   const payload = typeof input === "string" ? JSON.parse(input) : input;
   const items = Array.isArray(payload?.items) ? payload.items : Array.isArray(payload?.assignments) ? payload.assignments : [];
-  if (!items.length) throw new Error('导入分类 JSON 需要包含 items，例如 {"items":[{"i":1,"name":"旅行"}]}');
+  if (!items.length) throw new Error('\u5bfc\u5165\u5206\u7c7b JSON \u9700\u8981\u5305\u542b items\uff0c\u4f8b\u5982 {"items":[{"i":1,"name":"\u65c5\u884c"}]}');
 
   const selected = (notes || []).slice(0, config.maxTitlesForPrompt);
   const categories = new Map();
-  const other = { name: "其他", title: "其他", intro: "", count: 0, titles: [], isOther: true };
+  const other = { name: OTHER_CATEGORY_NAME, title: OTHER_CATEGORY_NAME, intro: "", count: 0, titles: [], isOther: true };
   const existingNames = new Set((existingAlbums || []).map((album) => normalizeText(album.name || album)).filter(Boolean));
   const byIndex = new Map(selected.map((note, index) => [index + 1, note]));
   const handledIndexes = new Set();
@@ -942,11 +994,11 @@ function manualAssignmentsToPlan(input, notes, existingAlbums, config, granulari
     if (!title || !rawName) continue;
 
     let category = other;
-    if (!isOtherName(rawName)) {
-      const name = cleanCategoryName(rawName, categories.size);
-      const key = compactTitle(name);
+    const name = cleanCategoryName(rawName, categories.size);
+    if (!isOtherName(name)) {
+      const key = categoryKey(name) || compactTitle(name);
       if (!categories.has(key)) {
-        const regularCount = Array.from(categories.values()).filter((candidate) => !candidate.isOther).length;
+        const regularCount = Array.from(categories.values()).filter(isRegularCategory).length;
         if (regularCount < config.maxCategories || existingNames.has(name)) {
           categories.set(key, { name, title: name, intro: "", count: 0, titles: [], isExisting: existingNames.has(name) });
         }
@@ -967,7 +1019,7 @@ function manualAssignmentsToPlan(input, notes, existingAlbums, config, granulari
   other.count = other.titles.length;
 
   const outputCategories = Array.from(categories.values())
-    .filter((category) => category.titles.length)
+    .filter((category) => category.titles.length && isRegularCategory(category))
     .map((category) => ({ ...category, intro: categoryIntro(category), count: category.titles.length }));
   if (other.titles.length) outputCategories.push({ ...other, intro: categoryIntro(other), count: other.titles.length });
 
@@ -1211,15 +1263,15 @@ function ensureControls(onRun) {
     host = document.createElement("div");
     host.id = HOST_ID;
     host.innerHTML = `
-      <div class="tabbit-xhs-controls" role="group" aria-label="数量上限">
-        <label class="tabbit-xhs-select"><span>分类</span><select data-limit-key="maxCategories" aria-label="分类数量上限">${optionsHtml([5, 10, 15, 20, 30, 50], state.config.maxCategories)}</select></label>
-        <label class="tabbit-xhs-select"><span>标题</span><select data-limit-key="maxTitlesForPrompt" aria-label="标题选择数量上限">${optionsHtml([100, 200, 300, 500, 1000, 2000, 5000], state.config.maxTitlesForPrompt)}</select></label>
+      <div class="tabbit-xhs-controls" role="group" aria-label="\u6570\u91cf\u4e0a\u9650">
+        <label class="tabbit-xhs-select"><span>\u5206\u7c7b</span><select data-limit-key="maxCategories" aria-label="\u5206\u7c7b\u6570\u91cf\u4e0a\u9650">${optionsHtml([5, 10, 15, 20, 30, 50], state.config.maxCategories)}</select></label>
+        <label class="tabbit-xhs-select"><span>\u6807\u9898</span><select data-limit-key="maxTitlesForPrompt" aria-label="\u6807\u9898\u9009\u62e9\u6570\u91cf\u4e0a\u9650">${optionsHtml([100, 200, 300, 500, 1000, 2000, 5000], state.config.maxTitlesForPrompt)}</select></label>
       </div>
-      <div class="tabbit-xhs-granularity" role="group" aria-label="分类粒度">
-        <button class="tabbit-xhs-granularity-option" type="button" data-granularity="coarse" aria-pressed="false">粗</button>
-        <button class="tabbit-xhs-granularity-option" type="button" data-granularity="fine" aria-pressed="false">细</button>
+      <div class="tabbit-xhs-granularity" role="group" aria-label="\u5206\u7c7b\u7c92\u5ea6">
+        <button class="tabbit-xhs-granularity-option" type="button" data-granularity="coarse" aria-pressed="false">\u7c97</button>
+        <button class="tabbit-xhs-granularity-option" type="button" data-granularity="fine" aria-pressed="false">\u7ec6</button>
       </div>
-      <button id="${BUTTON_ID}" type="button" aria-label="智能构建小红书收藏专辑"><span aria-hidden="true">＋</span><span>智能构建专辑</span></button>
+      <button id="${BUTTON_ID}" type="button" aria-label="\u667a\u80fd\u6784\u5efa\u5c0f\u7ea2\u4e66\u6536\u85cf\u4e13\u8f91"><span aria-hidden="true">\uff0b</span><span>\u667a\u80fd\u6784\u5efa\u4e13\u8f91</span></button>
     `;
 
     host.querySelectorAll("select[data-limit-key]").forEach((select) => {
@@ -1256,8 +1308,8 @@ function setBusy(busy, label) {
   document.querySelectorAll(".tabbit-xhs-granularity-option, select[data-limit-key]").forEach((element) => {
     element.disabled = !!busy;
   });
-  const iconHtml = busy ? '<span class="tabbit-xhs-spinner" aria-hidden="true"></span>' : "<span aria-hidden=\"true\">＋</span>";
-  button.innerHTML = `${iconHtml}<span>${escapeHtml(label || "智能构建专辑")}</span>`;
+  const iconHtml = busy ? '<span class="tabbit-xhs-spinner" aria-hidden="true"></span>' : "<span aria-hidden=\"true\">\uff0b</span>";
+  button.innerHTML = `${iconHtml}<span>${escapeHtml(label || "\u667a\u80fd\u6784\u5efa\u4e13\u8f91")}</span>`;
 }
 
 function closeOverlay() {
@@ -1276,7 +1328,7 @@ function overlayShell(kicker, title, subtitle, bodyHtml, actionsHtml = "") {
           <h2 class="tabbit-xhs-title">${escapeHtml(title)}</h2>
           <p class="tabbit-xhs-subtitle">${escapeHtml(subtitle)}</p>
         </div>
-        <button class="tabbit-xhs-close" type="button" aria-label="关闭">×</button>
+        <button class="tabbit-xhs-close" type="button" aria-label="\u5173\u95ed">\u00d7</button>
       </div>
       <div class="tabbit-xhs-body">${bodyHtml}</div>
       ${actionsHtml}
@@ -1305,55 +1357,55 @@ function updateProgress(percent, message) {
 }
 
 function showError(error) {
-  const message = normalizeText(error?.message || error || "未知错误");
+  const message = normalizeText(error?.message || error || "\u672a\u77e5\u9519\u8bef");
   overlayShell(
-    "未完成",
-    "智能构建专辑失败",
+    "\u672a\u5b8c\u6210",
+    "\u667a\u80fd\u6784\u5efa\u4e13\u8f91\u5931\u8d25",
     message,
     "",
-    '<div class="tabbit-xhs-actions"><button class="tabbit-xhs-action primary" type="button" data-action="close">知道了</button></div>'
+    '<div class="tabbit-xhs-actions"><button class="tabbit-xhs-action primary" type="button" data-action="close">\u77e5\u9053\u4e86</button></div>'
   ).querySelector('[data-action="close"]')?.addEventListener("click", closeOverlay);
 }
 
 function showPlanDialog(notes, plan, callbacks) {
   state.plan = plan;
   const categories = plan.categories || [];
-  const regularCount = categories.filter((category) => !category.isOther).length;
+  const regularCount = categories.filter(isRegularCategory).length;
   const other = categories.find((category) => category.isOther);
   const analyzed = Number(plan.analyzedTitleCount) || Math.min(notes.length, state.config.maxTitlesForPrompt);
   const total = Number(plan.totalTitleCount) || notes.length;
   const batchSize = Number(plan.batchSize) || state.config.classificationBatchSize;
-  const granularityName = plan.granularity === "fine" ? "细粒度" : "粗粒度";
+  const granularityName = plan.granularity === "fine" ? "\u7ec6\u7c92\u5ea6" : "\u7c97\u7c92\u5ea6";
   const subtitle =
-    `${granularityName}：已选择 ${analyzed}/${total} 个标题参与分类，按每批 ${batchSize} 个增量分析。` +
-    ` 将创建 ${regularCount} 个常规分类专辑${other ? `，另有“其他”${Number(other.count) || (other.titles || []).length || 0} 篇不计入上限` : ""}，默认私有。`;
+    `${granularityName}\uff1a\u5df2\u9009\u62e9 ${analyzed}/${total} \u4e2a\u6807\u9898\u53c2\u4e0e\u5206\u7c7b\uff0c\u6309\u6bcf\u6279 ${batchSize} \u4e2a\u589e\u91cf\u5206\u6790\u3002` +
+    ` \u5c06\u521b\u5efa ${regularCount} \u4e2a\u5e38\u89c4\u5206\u7c7b\u4e13\u8f91${other ? `\uff0c\u53e6\u6709\u201c\u5176\u4ed6\u201d${Number(other.count) || (other.titles || []).length || 0} \u7bc7\u4e0d\u8ba1\u5165\u4e0a\u9650` : ""}\uff0c\u9ed8\u8ba4\u79c1\u6709\u3002`;
 
   const body = `
     <div class="tabbit-xhs-summary">
-      <div class="tabbit-xhs-stat"><span>采集</span><b>${total}</b></div>
-      <div class="tabbit-xhs-stat"><span>分析</span><b>${analyzed}</b></div>
-      <div class="tabbit-xhs-stat"><span>已有专辑</span><b>${Number(plan.existingAlbumCount) || 0}</b></div>
-      <div class="tabbit-xhs-stat"><span>分类上限</span><b>${state.config.maxCategories}</b></div>
+      <div class="tabbit-xhs-stat"><span>\u91c7\u96c6</span><b>${total}</b></div>
+      <div class="tabbit-xhs-stat"><span>\u5206\u6790</span><b>${analyzed}</b></div>
+      <div class="tabbit-xhs-stat"><span>\u5df2\u6709\u4e13\u8f91</span><b>${Number(plan.existingAlbumCount) || 0}</b></div>
+      <div class="tabbit-xhs-stat"><span>\u5206\u7c7b\u4e0a\u9650</span><b>${state.config.maxCategories}</b></div>
     </div>
     <ul class="tabbit-xhs-list">
       ${categories.map((category) => `
         <li class="tabbit-xhs-item">
-          <div class="tabbit-xhs-item-head"><h3>${escapeHtml(category.name)}</h3><span class="tabbit-xhs-count">${category.isOther ? "未分类" : `${Number(category.count) || (category.titles || []).length || 0} 篇`}</span></div>
-          <p>${escapeHtml((category.titles || []).slice(0, 3).join(" / ") || category.intro || "收藏内容分类")}</p>
+          <div class="tabbit-xhs-item-head"><h3>${escapeHtml(category.name)}</h3><span class="tabbit-xhs-count">${category.isOther ? "\u672a\u5206\u7c7b" : `${Number(category.count) || (category.titles || []).length || 0} \u7bc7`}</span></div>
+          <p>${escapeHtml((category.titles || []).slice(0, 3).join(" / ") || category.intro || "\u6536\u85cf\u5185\u5bb9\u5206\u7c7b")}</p>
         </li>
       `).join("")}
     </ul>
     <div class="tabbit-xhs-options">
-      <div><strong>公开专辑</strong><span>${state.publicAlbum ? "其他人可以查看" : "仅自己可见"}</span></div>
-      <button class="tabbit-xhs-switch" type="button" role="switch" aria-checked="${state.publicAlbum ? "true" : "false"}" aria-label="公开专辑"></button>
+      <div><strong>\u516c\u5f00\u4e13\u8f91</strong><span>${state.publicAlbum ? "\u5176\u4ed6\u4eba\u53ef\u4ee5\u67e5\u770b" : "\u4ec5\u81ea\u5df1\u53ef\u89c1"}</span></div>
+      <button class="tabbit-xhs-switch" type="button" role="switch" aria-checked="${state.publicAlbum ? "true" : "false"}" aria-label="\u516c\u5f00\u4e13\u8f91"></button>
     </div>
   `;
   const overlay = overlayShell(
-    "分析完成",
-    `已归类 ${analyzed} 篇收藏笔记`,
+    "\u5206\u6790\u5b8c\u6210",
+    `\u5df2\u5f52\u7c7b ${analyzed} \u7bc7\u6536\u85cf\u7b14\u8bb0`,
     subtitle,
     body,
-    '<div class="tabbit-xhs-actions"><button class="tabbit-xhs-action secondary" type="button" data-action="cancel">取消</button><button class="tabbit-xhs-action primary" type="button" data-action="create">创建专辑</button></div>'
+    '<div class="tabbit-xhs-actions"><button class="tabbit-xhs-action secondary" type="button" data-action="cancel">\u53d6\u6d88</button><button class="tabbit-xhs-action primary" type="button" data-action="create">\u521b\u5efa\u4e13\u8f91</button></div>'
   );
 
   overlay.querySelector('[data-action="cancel"]')?.addEventListener("click", closeOverlay);
@@ -1361,7 +1413,7 @@ function showPlanDialog(notes, plan, callbacks) {
     state.publicAlbum = !state.publicAlbum;
     event.currentTarget.setAttribute("aria-checked", state.publicAlbum ? "true" : "false");
     const label = overlay.querySelector(".tabbit-xhs-options span");
-    if (label) label.textContent = state.publicAlbum ? "其他人可以查看" : "仅自己可见";
+    if (label) label.textContent = state.publicAlbum ? "\u5176\u4ed6\u4eba\u53ef\u4ee5\u67e5\u770b" : "\u4ec5\u81ea\u5df1\u53ef\u89c1";
   });
   overlay.querySelector('[data-action="create"]')?.addEventListener("click", callbacks.onCreate);
 }
@@ -1369,17 +1421,17 @@ function showPlanDialog(notes, plan, callbacks) {
 function showCreateResult(result, addCount, callbacks) {
   const body = `
     <ul class="tabbit-xhs-list">
-      ${result.created.map((name) => `<li class="tabbit-xhs-item"><div class="tabbit-xhs-item-head"><h3>${escapeHtml(name)}</h3><span class="tabbit-xhs-count">已创建</span></div></li>`).join("")}
-      ${result.skipped.map((name) => `<li class="tabbit-xhs-item"><div class="tabbit-xhs-item-head"><h3>${escapeHtml(name)}</h3><span class="tabbit-xhs-count">已存在</span></div></li>`).join("")}
-      ${result.failed.map((item) => `<li class="tabbit-xhs-item"><div class="tabbit-xhs-item-head"><h3>${escapeHtml(item.name)}</h3><span class="tabbit-xhs-count">失败</span></div><p>${escapeHtml(item.error)}</p></li>`).join("")}
+      ${result.created.map((name) => `<li class="tabbit-xhs-item"><div class="tabbit-xhs-item-head"><h3>${escapeHtml(name)}</h3><span class="tabbit-xhs-count">\u5df2\u521b\u5efa</span></div></li>`).join("")}
+      ${result.skipped.map((name) => `<li class="tabbit-xhs-item"><div class="tabbit-xhs-item-head"><h3>${escapeHtml(name)}</h3><span class="tabbit-xhs-count">\u5df2\u5b58\u5728</span></div></li>`).join("")}
+      ${result.failed.map((item) => `<li class="tabbit-xhs-item"><div class="tabbit-xhs-item-head"><h3>${escapeHtml(item.name)}</h3><span class="tabbit-xhs-count">\u5931\u8d25</span></div><p>${escapeHtml(item.error)}</p></li>`).join("")}
     </ul>
   `;
   const overlay = overlayShell(
-    "创建完成",
-    `新增 ${result.created.length} 个专辑，跳过 ${result.skipped.length} 个`,
-    result.failed.length ? `有 ${result.failed.length} 个未完成，请查看列表。` : `已按现有专辑去重。可添加 ${addCount} 篇笔记到对应专辑。`,
+    "\u521b\u5efa\u5b8c\u6210",
+    `\u65b0\u589e ${result.created.length} \u4e2a\u4e13\u8f91\uff0c\u8df3\u8fc7 ${result.skipped.length} \u4e2a`,
+    result.failed.length ? `\u6709 ${result.failed.length} \u4e2a\u672a\u5b8c\u6210\uff0c\u8bf7\u67e5\u770b\u5217\u8868\u3002` : `\u5df2\u6309\u73b0\u6709\u4e13\u8f91\u53bb\u91cd\u3002\u53ef\u6dfb\u52a0 ${addCount} \u7bc7\u7b14\u8bb0\u5230\u5bf9\u5e94\u4e13\u8f91\u3002`,
     body,
-    `<div class="tabbit-xhs-actions"><button class="tabbit-xhs-action secondary" type="button" data-action="close">完成</button><button class="tabbit-xhs-action primary" type="button" data-action="add" ${addCount ? "" : "disabled"}>接口一键添加</button></div>`
+    `<div class="tabbit-xhs-actions"><button class="tabbit-xhs-action secondary" type="button" data-action="close">\u5b8c\u6210</button><button class="tabbit-xhs-action primary" type="button" data-action="add" ${addCount ? "" : "disabled"}>\u63a5\u53e3\u4e00\u952e\u6dfb\u52a0</button></div>`
   );
   overlay.querySelector('[data-action="close"]')?.addEventListener("click", closeOverlay);
   overlay.querySelector('[data-action="add"]')?.addEventListener("click", callbacks.onAdd);
@@ -1389,15 +1441,15 @@ function showAddResult(result) {
   const body = `
     <ul class="tabbit-xhs-list">
       ${result.added.slice(0, 30).map((item) => `<li class="tabbit-xhs-item"><div class="tabbit-xhs-item-head"><h3>${escapeHtml(item.title)}</h3><span class="tabbit-xhs-count">${escapeHtml(item.category)}</span></div></li>`).join("")}
-      ${result.failed.map((item) => `<li class="tabbit-xhs-item"><div class="tabbit-xhs-item-head"><h3>${escapeHtml(item.title)}</h3><span class="tabbit-xhs-count">失败</span></div><p>${escapeHtml(`${item.category}：${item.error}`)}</p></li>`).join("")}
+      ${result.failed.map((item) => `<li class="tabbit-xhs-item"><div class="tabbit-xhs-item-head"><h3>${escapeHtml(item.title)}</h3><span class="tabbit-xhs-count">\u5931\u8d25</span></div><p>${escapeHtml(`${item.category}\uff1a${item.error}`)}</p></li>`).join("")}
     </ul>
   `;
   overlayShell(
-    "添加完成",
-    `已添加 ${result.added.length} 篇，失败 ${result.failed.length} 篇`,
-    "已通过小红书前端接口封装加入对应专辑。",
+    "\u6dfb\u52a0\u5b8c\u6210",
+    `\u5df2\u6dfb\u52a0 ${result.added.length} \u7bc7\uff0c\u5931\u8d25 ${result.failed.length} \u7bc7`,
+    "\u5df2\u901a\u8fc7\u5c0f\u7ea2\u4e66\u524d\u7aef\u63a5\u53e3\u5c01\u88c5\u52a0\u5165\u5bf9\u5e94\u4e13\u8f91\u3002",
     body,
-    '<div class="tabbit-xhs-actions"><button class="tabbit-xhs-action primary" type="button" data-action="close">完成</button></div>'
+    '<div class="tabbit-xhs-actions"><button class="tabbit-xhs-action primary" type="button" data-action="close">\u5b8c\u6210</button></div>'
   ).querySelector('[data-action="close"]')?.addEventListener("click", closeOverlay);
 }
 
@@ -1428,7 +1480,7 @@ function summarizeResponse(value) {
 }
 
 function isLoginError(error) {
-  return /无登录|登录信息|请先登录|未登录|login|unauthorized|401|403/i.test(errorMessage(error));
+  return /\u65e0\u767b\u5f55|\u767b\u5f55\u4fe1\u606f|\u8bf7\u5148\u767b\u5f55|\u672a\u767b\u5f55|login|unauthorized|401|403/i.test(errorMessage(error));
 }
 
 function assertApiSuccess(value, label) {
@@ -1437,7 +1489,7 @@ function assertApiSuccess(value, label) {
   const success = value.success ?? value.data?.success;
   const message = value.msg || value.message || value.data?.msg || value.data?.message || "";
   if (code === 0 || success === true || (code == null && success == null)) return value;
-  throw new Error(`${label} 返回失败${code != null ? ` code=${code}` : ""}${message ? `：${message}` : ""}`);
+  throw new Error(`${label} \u8fd4\u56de\u5931\u8d25${code != null ? ` code=${code}` : ""}${message ? `\uff1a${message}` : ""}`);
 }
 
 function getWebpackRequire() {
@@ -1447,7 +1499,7 @@ function getWebpackRequire() {
   chunks.push([[chunkName], {}, (runtimeRequire) => {
     requireFn = runtimeRequire;
   }]);
-  if (!requireFn) throw new Error("没有获取到小红书 webpack runtime，无法调用前端接口封装");
+  if (!requireFn) throw new Error("\u6ca1\u6709\u83b7\u53d6\u5230\u5c0f\u7ea2\u4e66 webpack runtime\uff0c\u65e0\u6cd5\u8c03\u7528\u524d\u7aef\u63a5\u53e3\u5c01\u88c5");
   return requireFn;
 }
 
@@ -1455,7 +1507,7 @@ function requireModule(requireFn, id) {
   try {
     return requireFn?.(id);
   } catch (error) {
-    logger.warn("require 小红书模块失败", { id, error: errorMessage(error) });
+    logger.warn("require \u5c0f\u7ea2\u4e66\u6a21\u5757\u5931\u8d25", { id, error: errorMessage(error) });
     return null;
   }
 }
@@ -1505,7 +1557,7 @@ function discoverApi(requireFn) {
   try {
     Object.values(requireFn?.c || {}).forEach((entry) => discoverFromExports(entry?.exports, found, seen));
   } catch (error) {
-    logger.warn("遍历 webpack cache 失败", { error: errorMessage(error), detail: errorDetail(error) });
+    logger.warn("\u904d\u5386 webpack cache \u5931\u8d25", { error: errorMessage(error), detail: errorDetail(error) });
   }
 
   if (!found.move && requireFn?.m) {
@@ -1515,7 +1567,7 @@ function discoverApi(requireFn) {
     }
   }
 
-  logger.debug("webpack API 探测结果", {
+  logger.debug("webpack API \u63a2\u6d4b\u7ed3\u679c", {
     hasMove: !!found.move,
     hasCollect: !!found.collect,
     hasBoardUser: !!found.boardUser,
@@ -1530,13 +1582,13 @@ function discoverApi(requireFn) {
 function getApiModule() {
   if (state.apiModule?.move) return state.apiModule;
   if (state.apiModule && !state.apiModule.move) {
-    throw new Error("没有找到小红书 note/move 内部 API。可能是小红书前端打包结构已变化，请查看 Console 的 webpack API 探测结果。");
+    throw new Error("\u6ca1\u6709\u627e\u5230\u5c0f\u7ea2\u4e66 note/move \u5185\u90e8 API\u3002\u53ef\u80fd\u662f\u5c0f\u7ea2\u4e66\u524d\u7aef\u6253\u5305\u7ed3\u6784\u5df2\u53d8\u5316\uff0c\u8bf7\u67e5\u770b Console \u7684 webpack API \u63a2\u6d4b\u7ed3\u679c\u3002");
   }
   const api = discoverApi(getWebpackRequire());
   state.apiModule = api;
   if (!api.move) {
-    // TODO: 小红书改版后，可以在这里补充新的模块签名或公开接口适配。
-    throw new Error("没有找到小红书 note/move 内部 API。可能是小红书前端打包结构已变化，请查看 Console 的 webpack API 探测结果。");
+    // TODO: \u5c0f\u7ea2\u4e66\u6539\u7248\u540e\uff0c\u53ef\u4ee5\u5728\u8fd9\u91cc\u8865\u5145\u65b0\u7684\u6a21\u5757\u7b7e\u540d\u6216\u516c\u5f00\u63a5\u53e3\u9002\u914d\u3002
+    throw new Error("\u6ca1\u6709\u627e\u5230\u5c0f\u7ea2\u4e66 note/move \u5185\u90e8 API\u3002\u53ef\u80fd\u662f\u5c0f\u7ea2\u4e66\u524d\u7aef\u6253\u5305\u7ed3\u6784\u5df2\u53d8\u5316\uff0c\u8bf7\u67e5\u770b Console \u7684 webpack API \u63a2\u6d4b\u7ed3\u679c\u3002");
   }
   return api;
 }
@@ -1546,7 +1598,7 @@ function withTimeout(promise, label, timeoutMs) {
   return Promise.race([
     Promise.resolve(promise),
     new Promise((_, reject) => {
-      timer = setTimeout(() => reject(new Error(`${label} 超过 ${Math.round(timeoutMs / 1000)} 秒`)), timeoutMs);
+      timer = setTimeout(() => reject(new Error(`${label} \u8d85\u8fc7 ${Math.round(timeoutMs / 1000)} \u79d2`)), timeoutMs);
     })
   ]).finally(() => {
     if (timer) clearTimeout(timer);
@@ -1558,22 +1610,22 @@ async function retry(fn, label, config, retries = config.apiRetryCount) {
   for (let attempt = 0; attempt <= retries; attempt += 1) {
     try {
       const result = await withTimeout(fn(), label, config.apiRequestTimeoutMs);
-      logger.debug("API 请求完成", { label, attempt: attempt + 1, response: summarizeResponse(result) });
+      logger.debug("API \u8bf7\u6c42\u5b8c\u6210", { label, attempt: attempt + 1, response: summarizeResponse(result) });
       return result;
     } catch (error) {
       lastError = error;
       if (attempt >= retries) break;
       const delay = config.apiRetryDelay * (attempt + 1);
-      logger.warn("API 请求失败，准备重试", { label, attempt: attempt + 1, delay, error: errorMessage(error), detail: errorDetail(error) });
+      logger.warn("API \u8bf7\u6c42\u5931\u8d25\uff0c\u51c6\u5907\u91cd\u8bd5", { label, attempt: attempt + 1, delay, error: errorMessage(error), detail: errorDetail(error) });
       await sleep(delay);
     }
   }
-  logger.error(`API 请求最终失败：${label}`, lastError);
-  throw lastError || new Error(`${label} 失败`);
+  logger.error(`API \u8bf7\u6c42\u6700\u7ec8\u5931\u8d25\uff1a${label}`, lastError);
+  throw lastError || new Error(`${label} \u5931\u8d25`);
 }
 
 async function checkLogin(config) {
-  logger.debug("登录态检查开始");
+  logger.debug("\u767b\u5f55\u6001\u68c0\u67e5\u5f00\u59cb");
   const response = await withTimeout(
     fetch("https://edith.xiaohongshu.com/api/sns/web/v2/user/me", {
       method: "GET",
@@ -1581,7 +1633,7 @@ async function checkLogin(config) {
       mode: "cors",
       headers: { accept: "application/json, text/plain, */*" }
     }),
-    "检查小红书登录态",
+    "\u68c0\u67e5\u5c0f\u7ea2\u4e66\u767b\u5f55\u6001",
     config.apiRequestTimeoutMs
   );
 
@@ -1589,13 +1641,13 @@ async function checkLogin(config) {
   try {
     payload = await response.json();
   } catch (error) {
-    throw new Error(`检查小红书登录态返回非 JSON：${errorMessage(error)}`);
+    throw new Error(`\u68c0\u67e5\u5c0f\u7ea2\u4e66\u767b\u5f55\u6001\u8fd4\u56de\u975e JSON\uff1a${errorMessage(error)}`);
   }
 
-  logger.debug("登录态检查返回", summarizeResponse(payload));
-  if (!response.ok) throw new Error(`检查小红书登录态 HTTP ${response.status}`);
-  assertApiSuccess(payload, "检查小红书登录态");
-  if (isLoginError(payload)) throw new Error(`小红书登录态不可用：${errorMessage(payload)}`);
+  logger.debug("\u767b\u5f55\u6001\u68c0\u67e5\u8fd4\u56de", summarizeResponse(payload));
+  if (!response.ok) throw new Error(`\u68c0\u67e5\u5c0f\u7ea2\u4e66\u767b\u5f55\u6001 HTTP ${response.status}`);
+  assertApiSuccess(payload, "\u68c0\u67e5\u5c0f\u7ea2\u4e66\u767b\u5f55\u6001");
+  if (isLoginError(payload)) throw new Error(`\u5c0f\u7ea2\u4e66\u767b\u5f55\u6001\u4e0d\u53ef\u7528\uff1a${errorMessage(payload)}`);
   return payload;
 }
 
@@ -1632,20 +1684,20 @@ function collectBoardItems(value, output = []) {
 async function boardUserFallback(config) {
   const userId = extractProfileUserId();
   if (!userId) {
-    logger.warn("没有解析到 profile user_id，跳过 board/user 兜底");
+    logger.warn("\u6ca1\u6709\u89e3\u6790\u5230 profile user_id\uff0c\u8df3\u8fc7 board/user \u515c\u5e95");
     return [];
   }
 
   const api = getApiModule();
   if (!api.boardUser) {
-    logger.warn("没有找到 board/user API，跳过专辑 id 兜底");
+    logger.warn("\u6ca1\u6709\u627e\u5230 board/user API\uff0c\u8df3\u8fc7\u4e13\u8f91 id \u515c\u5e95");
     return [];
   }
 
-  const result = await retry(() => api.boardUser({ user_id: userId }), "查询专辑列表", config, 1);
-  assertApiSuccess(result, "查询专辑列表");
+  const result = await retry(() => api.boardUser({ user_id: userId }), "\u67e5\u8be2\u4e13\u8f91\u5217\u8868", config, 1);
+  assertApiSuccess(result, "\u67e5\u8be2\u4e13\u8f91\u5217\u8868");
   const boards = collectBoardItems(result);
-  logger.debug("board/user 专辑解析完成", { count: boards.length, names: boards.slice(0, 20).map((item) => item.name) });
+  logger.debug("board/user \u4e13\u8f91\u89e3\u6790\u5b8c\u6210", { count: boards.length, names: boards.slice(0, 20).map((item) => item.name) });
   return boards;
 }
 
@@ -1657,19 +1709,19 @@ async function resolveBoardIdMap(requiredNames, domAlbums, config) {
 
   const missing = requiredNames.filter((name) => name && !map.has(name));
   if (missing.length) {
-    logger.warn("DOM 缺少目标专辑 id，尝试 board/user 兜底", { missing });
+    logger.warn("DOM \u7f3a\u5c11\u76ee\u6807\u4e13\u8f91 id\uff0c\u5c1d\u8bd5 board/user \u515c\u5e95", { missing });
     try {
       for (const album of await boardUserFallback(config)) {
         if (album.id && album.name) map.set(album.name, album.id);
       }
     } catch (error) {
-      logger.warn("board/user 兜底失败", { error: errorMessage(error), detail: errorDetail(error) });
+      logger.warn("board/user \u515c\u5e95\u5931\u8d25", { error: errorMessage(error), detail: errorDetail(error) });
     }
   }
 
   const stillMissing = requiredNames.filter((name) => name && !map.has(name));
   if (stillMissing.length) {
-    logger.warn("仍缺少目标专辑 id", { stillMissing, parsedNames: Array.from(map.keys()) });
+    logger.warn("\u4ecd\u7f3a\u5c11\u76ee\u6807\u4e13\u8f91 id", { stillMissing, parsedNames: Array.from(map.keys()) });
   }
   state.boardIdMap = map;
   return map;
@@ -1694,7 +1746,7 @@ function buildAssignments(plan, collectedNotes) {
   const seen = new Set();
   const assignments = [];
   const pushAssignment = (note, category) => {
-    if (!note || !category || /^(其他|未分类|杂项|其它|其他收藏)$/i.test(category)) return;
+    if (!note || !category || isOtherName(category)) return;
     const title = normalizeText(note.title);
     const noteId = note.noteId;
     const key = `${noteId || noteKey(note) || title}::${category}`;
@@ -1705,7 +1757,7 @@ function buildAssignments(plan, collectedNotes) {
   };
 
   for (const category of plan.categories) {
-    if (category.isOther) continue;
+    if (!isRegularCategory(category)) continue;
     for (const rawTitle of category.titles || []) {
       const title = normalizeText(rawTitle);
       const note = (byTitle.get(title) || []).shift() || (byCompactTitle.get(title.toLowerCase().replace(/\s+/g, "")) || []).shift();
@@ -1717,29 +1769,29 @@ function buildAssignments(plan, collectedNotes) {
     const title = normalizeText(note.title);
     pushAssignment(note, state.assignmentCache.get(title) || state.assignmentCache.get(title.toLowerCase().replace(/\s+/g, "")));
   }
-  logger.debug("构建 move 映射", { count: assignments.length, sample: assignments.slice(0, 10) });
+  logger.debug("\u6784\u5efa move \u6620\u5c04", { count: assignments.length, sample: assignments.slice(0, 10) });
   return assignments;
 }
 
 async function moveOne(assignment, boardIdMap, config) {
-  if (!assignment.noteId) throw new Error("没有从笔记链接中解析到 noteId");
-  if (!assignment.isCollected) throw new Error("跳过非收藏来源笔记，避免移动自己发布的笔记");
+  if (!assignment.noteId) throw new Error("\u6ca1\u6709\u4ece\u7b14\u8bb0\u94fe\u63a5\u4e2d\u89e3\u6790\u5230 noteId");
+  if (!assignment.isCollected) throw new Error("\u8df3\u8fc7\u975e\u6536\u85cf\u6765\u6e90\u7b14\u8bb0\uff0c\u907f\u514d\u79fb\u52a8\u81ea\u5df1\u53d1\u5e03\u7684\u7b14\u8bb0");
   const targetBoardId = boardIdMap.get(assignment.category);
-  if (!targetBoardId) throw new Error(`没有找到专辑 id：${assignment.category}`);
+  if (!targetBoardId) throw new Error(`\u6ca1\u6709\u627e\u5230\u4e13\u8f91 id\uff1a${assignment.category}`);
 
   const api = getApiModule();
   const context = { title: assignment.title, noteId: assignment.noteId, category: assignment.category, targetBoardId };
-  logger.debug("move API 调用参数", context);
+  logger.debug("move API \u8c03\u7528\u53c2\u6570", context);
 
   if (config.apiEnsureCollectBeforeMove) {
-    if (!api.collect) throw new Error("没有找到 note/collect 内部 API，无法执行预收藏确认");
-    await retry(() => api.collect({ note_id: assignment.noteId }), `收藏笔记 ${assignment.noteId}`, config, 1)
-      .then((result) => assertApiSuccess(result, `收藏笔记 ${assignment.noteId}`));
+    if (!api.collect) throw new Error("\u6ca1\u6709\u627e\u5230 note/collect \u5185\u90e8 API\uff0c\u65e0\u6cd5\u6267\u884c\u9884\u6536\u85cf\u786e\u8ba4");
+    await retry(() => api.collect({ note_id: assignment.noteId }), `\u6536\u85cf\u7b14\u8bb0 ${assignment.noteId}`, config, 1)
+      .then((result) => assertApiSuccess(result, `\u6536\u85cf\u7b14\u8bb0 ${assignment.noteId}`));
   }
 
   const body = { target_board_id: targetBoardId, notes_id: assignment.noteId };
-  const result = await retry(() => api.move(body), `移动笔记 ${assignment.noteId} 到专辑`, config);
-  assertApiSuccess(result, `移动笔记 ${assignment.noteId} 到专辑`);
+  const result = await retry(() => api.move(body), `\u79fb\u52a8\u7b14\u8bb0 ${assignment.noteId} \u5230\u4e13\u8f91`, config);
+  assertApiSuccess(result, `\u79fb\u52a8\u7b14\u8bb0 ${assignment.noteId} \u5230\u4e13\u8f91`);
   return result;
 }
 
@@ -1750,18 +1802,18 @@ async function moveAssignments(assignments, boardIdMap, config, onProgress = () 
   const result = { added: [], failed: [] };
   for (let index = 0; index < assignments.length; index += 1) {
     const assignment = assignments[index];
-    onProgress(12 + Math.round((index / Math.max(1, assignments.length)) * 84), `正在添加 ${index + 1}/${assignments.length}：${assignment.title}`);
+    onProgress(12 + Math.round((index / Math.max(1, assignments.length)) * 84), `\u6b63\u5728\u6dfb\u52a0 ${index + 1}/${assignments.length}\uff1a${assignment.title}`);
     try {
       await moveOne(assignment, boardIdMap, config);
       result.added.push(assignment);
     } catch (error) {
-      if (isLoginError(error)) throw new Error(`小红书登录态失效，请重新登录后再试：${errorMessage(error)}`);
+      if (isLoginError(error)) throw new Error(`\u5c0f\u7ea2\u4e66\u767b\u5f55\u6001\u5931\u6548\uff0c\u8bf7\u91cd\u65b0\u767b\u5f55\u540e\u518d\u8bd5\uff1a${errorMessage(error)}`);
       result.failed.push({ ...assignment, error: errorMessage(error) });
-      logger.error(`移动笔记失败：${assignment.title}`, error);
+      logger.error(`\u79fb\u52a8\u7b14\u8bb0\u5931\u8d25\uff1a${assignment.title}`, error);
     }
     if (config.apiAddDelay) await sleep(config.apiAddDelay);
   }
-  logger.debug("move 批处理完成", { added: result.added.length, failed: result.failed.length });
+  logger.debug("move \u6279\u5904\u7406\u5b8c\u6210", { added: result.added.length, failed: result.failed.length });
   return result;
 }
 
@@ -1771,13 +1823,13 @@ function installMoveProbe() {
     const noteId = normalizeText(input.noteId || input.notes_id);
     const targetBoardId = normalizeText(input.targetBoardId || input.target_board_id);
     if (!noteId || !targetBoardId) {
-      throw new Error("需要传入 noteId 和 targetBoardId，例如 window.__tabbitXhsApiMoveProbe({ noteId, targetBoardId })");
+      throw new Error("\u9700\u8981\u4f20\u5165 noteId \u548c targetBoardId\uff0c\u4f8b\u5982 window.__tabbitXhsApiMoveProbe({ noteId, targetBoardId })");
     }
     const api = getApiModule();
     const body = { target_board_id: targetBoardId, notes_id: noteId };
     logger.debug("manual move probe start", { body, moveSource: api.moveSource });
     const response = await api.move(body);
-    assertApiSuccess(response, `手动探针移动笔记 ${noteId} 到专辑`);
+    assertApiSuccess(response, `\u624b\u52a8\u63a2\u9488\u79fb\u52a8\u7b14\u8bb0 ${noteId} \u5230\u4e13\u8f91`);
     logger.debug("manual move probe success", summarizeResponse(response));
     return response;
   };
@@ -1790,33 +1842,33 @@ async function handleRun() {
   if (state.running) return;
   state.running = true;
   state.publicAlbum = false;
-  setBusy(true, "采集中");
+  setBusy(true, "\u91c7\u96c6\u4e2d");
 
   try {
-    if (!isFavNotePage()) throw new Error("请先切换到收藏页的笔记子分类后再运行。");
+    if (!isFavNotePage()) throw new Error("\u8bf7\u5148\u5207\u6362\u5230\u6536\u85cf\u9875\u7684\u7b14\u8bb0\u5b50\u5206\u7c7b\u540e\u518d\u8fd0\u884c\u3002");
 
-    showProgress("正在读取已有专辑", "先进入专辑页面获取已有分类名称");
+    showProgress("\u6b63\u5728\u8bfb\u53d6\u5df2\u6709\u4e13\u8f91", "\u5148\u8fdb\u5165\u4e13\u8f91\u9875\u9762\u83b7\u53d6\u5df2\u6709\u5206\u7c7b\u540d\u79f0");
     state.existingAlbums = await readExistingAlbums(state.config, updateProgress);
 
-    updateProgress(34, `已读取 ${state.existingAlbums.length} 个已有专辑，准备回到笔记页`);
+    updateProgress(34, `\u5df2\u8bfb\u53d6 ${state.existingAlbums.length} \u4e2a\u5df2\u6709\u4e13\u8f91\uff0c\u51c6\u5907\u56de\u5230\u7b14\u8bb0\u9875`);
     await switchToNoteTab();
 
-    showProgress("正在扫描收藏笔记", `已读取 ${state.existingAlbums.length} 个已有专辑，开始滚动当前页面并收集标题`);
+    showProgress("\u6b63\u5728\u626b\u63cf\u6536\u85cf\u7b14\u8bb0", `\u5df2\u8bfb\u53d6 ${state.existingAlbums.length} \u4e2a\u5df2\u6709\u4e13\u8f91\uff0c\u5f00\u59cb\u6eda\u52a8\u5f53\u524d\u9875\u9762\u5e76\u6536\u96c6\u6807\u9898`);
     state.collected = await scanCollectedNotes(state.config, updateProgress);
-    if (!state.collected.length) throw new Error("没有读取到收藏笔记标题");
+    if (!state.collected.length) throw new Error("\u6ca1\u6709\u8bfb\u53d6\u5230\u6536\u85cf\u7b14\u8bb0\u6807\u9898");
 
-    updateProgress(62, `已捕获 ${state.collected.length} 个标题，准备按每批 ${state.config.classificationBatchSize} 个增量分类`);
+    updateProgress(62, `\u5df2\u6355\u83b7 ${state.collected.length} \u4e2a\u6807\u9898\uff0c\u51c6\u5907\u6309\u6bcf\u6279 ${state.config.classificationBatchSize} \u4e2a\u589e\u91cf\u5206\u7c7b`);
     const existingNames = state.existingAlbums.map((album) => album.name);
     state.plan = await classifyNotes(state.collected, existingNames, {
       config: state.config,
       granularity: state.granularity
     }, updateProgress);
-    if (!state.plan.categories?.length) throw new Error("没有生成可创建的分类。");
+    if (!state.plan.categories?.length) throw new Error("\u6ca1\u6709\u751f\u6210\u53ef\u521b\u5efa\u7684\u5206\u7c7b\u3002");
 
-    updateProgress(100, "分类完成");
+    updateProgress(100, "\u5206\u7c7b\u5b8c\u6210");
     showPlanDialog(state.collected, state.plan, { onCreate: handleCreate });
   } catch (error) {
-    logger.error("小红书智能构建专辑失败", error);
+    logger.error("\u5c0f\u7ea2\u4e66\u667a\u80fd\u6784\u5efa\u4e13\u8f91\u5931\u8d25", error);
     showError(error);
   } finally {
     state.running = false;
@@ -1827,19 +1879,19 @@ async function handleRun() {
 async function handleCreate() {
   if (state.running || !state.plan?.categories?.length) return;
   state.running = true;
-  setBusy(true, "创建中");
+  setBusy(true, "\u521b\u5efa\u4e2d");
 
   try {
-    showProgress("正在创建专辑", "正在进入专辑页面并检查已有专辑");
+    showProgress("\u6b63\u5728\u521b\u5efa\u4e13\u8f91", "\u6b63\u5728\u8fdb\u5165\u4e13\u8f91\u9875\u9762\u5e76\u68c0\u67e5\u5df2\u6709\u4e13\u8f91");
     const freshAlbums = await readExistingAlbums(state.config, updateProgress);
     state.existingAlbums = freshAlbums.length ? freshAlbums : state.existingAlbums;
     const result = await createAlbums(state.plan, state.existingAlbums, state.publicAlbum, state.config, updateProgress);
-    updateProgress(100, "创建流程完成");
+    updateProgress(100, "\u521b\u5efa\u6d41\u7a0b\u5b8c\u6210");
 
     const assignments = buildAssignments(state.plan, state.collected);
     showCreateResult(result, assignments.length, { onAdd: handleAdd });
   } catch (error) {
-    logger.error("创建专辑流程失败", error);
+    logger.error("\u521b\u5efa\u4e13\u8f91\u6d41\u7a0b\u5931\u8d25", error);
     showError(error);
   } finally {
     state.running = false;
@@ -1851,24 +1903,24 @@ async function handleAdd() {
   if (state.adding || state.running) return;
   const assignments = buildAssignments(state.plan, state.collected);
   if (!assignments.length) {
-    showError(new Error("没有可添加到专辑的笔记映射。请先完成分类和创建专辑。"));
+    showError(new Error("\u6ca1\u6709\u53ef\u6dfb\u52a0\u5230\u4e13\u8f91\u7684\u7b14\u8bb0\u6620\u5c04\u3002\u8bf7\u5148\u5b8c\u6210\u5206\u7c7b\u548c\u521b\u5efa\u4e13\u8f91\u3002"));
     return;
   }
 
   state.adding = true;
-  setBusy(true, "添加中");
-  showProgress("正在通过接口添加笔记", `准备处理 ${assignments.length} 篇笔记`);
+  setBusy(true, "\u6dfb\u52a0\u4e2d");
+  showProgress("\u6b63\u5728\u901a\u8fc7\u63a5\u53e3\u6dfb\u52a0\u7b14\u8bb0", `\u51c6\u5907\u5904\u7406 ${assignments.length} \u7bc7\u7b14\u8bb0`);
 
   try {
-    updateProgress(6, "正在读取专辑 id");
+    updateProgress(6, "\u6b63\u5728\u8bfb\u53d6\u4e13\u8f91 id");
     const requiredNames = Array.from(new Set(assignments.map((item) => item.category).filter(Boolean)));
     const albums = await readExistingAlbums(state.config, updateProgress);
     const boardIdMap = await resolveBoardIdMap(requiredNames, albums, state.config);
     const result = await moveAssignments(assignments, boardIdMap, state.config, updateProgress);
-    updateProgress(100, "接口添加流程完成");
+    updateProgress(100, "\u63a5\u53e3\u6dfb\u52a0\u6d41\u7a0b\u5b8c\u6210");
     showAddResult(result);
   } catch (error) {
-    logger.error("添加笔记到专辑失败", error);
+    logger.error("\u6dfb\u52a0\u7b14\u8bb0\u5230\u4e13\u8f91\u5931\u8d25", error);
     showError(error);
   } finally {
     state.adding = false;
@@ -1911,12 +1963,12 @@ function init() {
   state.observer.observe(document.body, { childList: true, subtree: true });
   window.addEventListener("popstate", scheduleControls);
   window.addEventListener("hashchange", scheduleControls);
-  logger.debug("小红书智能构建专辑按钮已启用", { config: state.config });
+  logger.debug("\u5c0f\u7ea2\u4e66\u667a\u80fd\u6784\u5efa\u4e13\u8f91\u6309\u94ae\u5df2\u542f\u7528", { config: state.config });
 }
 
 function getManualPayload() {
   if (!state.collected.length) {
-    throw new Error("还没有扫描结果。请先点击“智能构建专辑”，等它读取标题后再导出。");
+    throw new Error("\u8fd8\u6ca1\u6709\u626b\u63cf\u7ed3\u679c\u3002\u8bf7\u5148\u70b9\u51fb\u201c\u667a\u80fd\u6784\u5efa\u4e13\u8f91\u201d\uff0c\u7b49\u5b83\u8bfb\u53d6\u6807\u9898\u540e\u518d\u5bfc\u51fa\u3002");
   }
   return buildManualReviewPayload({
     notes: state.collected,
@@ -1943,16 +1995,16 @@ function installManualReviewHooks() {
   window.__tabbitXhsAlbumBuilderCopyPrompt = async function copyPrompt() {
     const prompt = buildManualReviewPrompt(getManualPayload());
     await navigator.clipboard.writeText(prompt);
-    console.debug("[Tabbit XHS] 已复制人工复核 prompt");
+    console.debug("[Tabbit XHS] \u5df2\u590d\u5236\u4eba\u5de5\u590d\u6838 prompt");
     return prompt;
   };
 
   window.__tabbitXhsAlbumBuilderApplyPlan = function applyPlan(input) {
     if (!state.collected.length) {
-      throw new Error("还没有扫描结果，无法导入分类。请先运行扫描。");
+      throw new Error("\u8fd8\u6ca1\u6709\u626b\u63cf\u7ed3\u679c\uff0c\u65e0\u6cd5\u5bfc\u5165\u5206\u7c7b\u3002\u8bf7\u5148\u8fd0\u884c\u626b\u63cf\u3002");
     }
     state.plan = manualAssignmentsToPlan(input, state.collected, state.existingAlbums, state.config, state.granularity);
-    logger.debug("导入人工复核分类结果", state.plan);
+    logger.debug("\u5bfc\u5165\u4eba\u5de5\u590d\u6838\u5206\u7c7b\u7ed3\u679c", state.plan);
     showPlanDialog(state.collected, state.plan, { onCreate: handleCreate });
     return state.plan;
   };

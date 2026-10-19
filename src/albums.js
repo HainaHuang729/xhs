@@ -1,4 +1,5 @@
 import { findVisible, fireClick, isVisible, normalizeText, setInputValue, sleep, waitFor } from "./dom.js";
+import { categoryKey, isRegularCategory } from "./categoryNames.js";
 import { logger } from "./logger.js";
 import { switchToAlbumTab } from "./scanner.js";
 
@@ -152,14 +153,16 @@ export async function createAlbums(plan, existingAlbums, publicAlbum, config, on
   await sleep(800);
 
   const existingNames = new Set(existingAlbums.map((album) => album.name || album).filter(Boolean));
+  const existingKeys = new Set(Array.from(existingNames).map(categoryKey).filter(Boolean));
   const result = { created: [], skipped: [], failed: [] };
-  const categories = (plan.categories || []).filter((album) => !album.isOther);
+  const categories = (plan.categories || []).filter(isRegularCategory);
 
   for (let index = 0; index < categories.length; index += 1) {
     const album = categories[index];
     onProgress(18 + Math.round((index / Math.max(1, categories.length)) * 72), `正在处理 ${index + 1}/${categories.length}：${album.name}`);
 
-    if (existingNames.has(album.name)) {
+    const key = categoryKey(album.name);
+    if (existingNames.has(album.name) || existingKeys.has(key)) {
       result.skipped.push(album.name);
       continue;
     }
@@ -168,6 +171,7 @@ export async function createAlbums(plan, existingAlbums, publicAlbum, config, on
       await createAlbumViaUi(album, publicAlbum);
       result.created.push(album.name);
       existingNames.add(album.name);
+      existingKeys.add(key);
     } catch (error) {
       result.failed.push({ name: album.name, error: error.message || String(error) });
       logger.error(`创建专辑失败：${album.name}`, error);

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#edf3fa"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>收藏去处 · 港深地图</title>
+  <link rel="stylesheet" href="vendor/leaflet.css"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="variants.css">
+</head>
+<body>
+  <header class="app-header">
+    <a class="brand" href="./" aria-label="收藏去处首页"><span class="brand-mark" aria-hidden="true">⌖</span><span>收藏去处<small>把收藏，变成下一站。</small></span></a>
+    <nav id="variantLinks" class="variant-links" aria-label="界面版本"></nav>
+    <div class="header-actions"><a id="discoverLink" class="discovery-entry" href="discover.html?look=focus">吃喝玩乐</a><a id="versionCompare" class="version-compare" href="versions.html">比较三版</a><button id="toggleBoardMap" class="board-map-toggle">查看地图</button><button id="openPhone" class="phone-trigger" aria-label="在手机上打开">▣ <span>手机打开</span></button><button id="openProgress" class="progress-trigger" aria-label="查看整理进度"><span class="progress-dot"></span><span id="progressLabel">查看整理进度</span><span aria-hidden="true">↗</span></button></div>
+  </header>
+  <div class="workspace">
+    <div id="categoryRail" class="category-rail" aria-label="收藏主题目录"></div>
+    <aside aria-label="收藏列表">
+      <div class="browse-head">
+        <div class="section-title"><div><h1 id="browseTitle">从收藏，走进城市。</h1><p id="browseDescription" class="browse-description"></p></div><span id="scopeCount"></span></div>
+        <div class="search-field"><span aria-hidden="true">⌕</span><input id="search" placeholder="搜店名、地点，或收藏里的关键词" aria-label="搜索收藏"><button id="clearSearch" aria-label="清空搜索" hidden>×</button></div>
+        <div class="category-launch"><button id="openCategories" aria-haspopup="dialog"><span aria-hidden="true">▦</span><span id="activeCategoryLabel">浏览分类目录</span><span aria-hidden="true">＋</span></button><span id="categoryScope"></span></div>
+        <div id="themeTabs" class="theme-tabs" role="group" aria-label="收藏主题"></div>
+        <div class="filter-row"><select id="region" aria-label="地区筛选"><option value="hksz">香港 + 深圳</option><option value="gba">整个大湾区</option><option>香港</option><option>深圳</option><option>广州</option><option>澳门</option><option>珠海</option><option>佛山</option><option>东莞</option><option>惠州</option><option>中山</option><option>江门</option><option>肇庆</option><option value="all">全部地区</option></select><select id="category" aria-label="收藏分类"><option value="all">全部分类</option></select></div>
+        <div class="food-filters" role="group" aria-label="吃喝分类">
+          <button data-food="all" class="active" aria-pressed="true"><span>全部</span><small></small></button>
+          <button data-food="菜系" aria-pressed="false"><span>菜系</span><small></small></button>
+          <button data-food="甜品" aria-pressed="false"><span>甜品</span><small></small></button>
+          <button data-food="小吃" aria-pressed="false"><span>小吃</span><small></small></button>
+          <button data-food="饮品" aria-pressed="false"><span>饮品</span><small></small></button>
+        </div>
+        <label id="cuisineField" class="cuisine-field" hidden><span>菜系</span><select id="cuisine" aria-label="菜系筛选"><option value="all">全部菜系</option></select></label>
+        <p id="foodHint" class="food-hint" hidden>合集可归入多类，地图只显示匹配地点。</p>
+        <nav aria-label="定位状态"><button data-filter="all" class="active" aria-pressed="true">全部 <span id="allCount">0</span></button><button data-filter="located" aria-pressed="false">已定位 <span id="locatedCount">0</span></button><button data-filter="pending" aria-pressed="false">未上图 <span id="pendingCount">0</span></button></nav>
+        <div class="list-caption"><span id="resultCount" aria-live="polite"></span><button id="resetFilters">重置筛选</button></div>
+        <p id="stats" class="sr-only"></p><p id="regionSummary" class="sr-only"></p>
+      </div>
+      <div id="list"></div>
+      <footer><span class="live-dot"></span>私人收藏地图 <span>点击照片，翻看原笔记图组</span></footer>
+    </aside>
+    <main aria-label="收藏地点地图">
+      <div id="map"></div>
+      <div class="mapbar"><div class="map-heading"><span class="live-dot"></span><div><strong id="mapTitle">港深收藏地图</strong><span id="mapCount">正在载入地点…</span></div></div><button id="fit"><span aria-hidden="true">⌖</span> 查看全部地点</button></div>
+      <div class="map-style-control" role="group" aria-label="地图样式"><button id="abstractMap" class="active" aria-pressed="true">漫游图</button><button id="streetMap" aria-pressed="false">街道图</button></div>
+      <button id="openMapCategories" class="map-category-launch" aria-haspopup="dialog">▦ 分类</button>
+      <div class="map-note" id="mapNote">海岸与片区的轻描绘 · 地点坐标保持真实</div>
+      <div class="map-legend"><span><i class="food-dot"></i>吃喝与日常</span><span><i class="outdoor-dot"></i>户外路线</span><span><i class="art-dot"></i>艺术与机位</span><button id="precisionHelp" aria-label="查看定位精度说明">定位说明 ⓘ</button></div>
+      <div id="empty" hidden><span class="empty-symbol" aria-hidden="true">⌖</span><h2>这组收藏还没有确认地点</h2><p>可以查看照片和正文，或在收藏详情里补充地点。</p><button id="showAll">查看本地区全部收藏</button></div>
+
+    </main>
+  </div>
+  <nav class="mobile-dock" aria-label="浏览视图"><button id="mobileList" class="active" aria-pressed="true"><span aria-hidden="true">▤</span> 收藏</button><button id="mobileMap" aria-pressed="false"><span aria-hidden="true">⌖</span> 地图</button></nav>
+  <dialog id="categoryDialog" class="category-dialog" aria-labelledby="categoryTitle"><div class="dialog-heading"><div><h2 id="categoryTitle">收藏分类</h2><p id="categoryDialogScope">按主题，找回你收藏的内容。</p></div><button id="closeCategories" class="icon-button" aria-label="关闭分类目录">×</button></div><div class="directory-tools"><button id="allCategories" class="all-categories">当前地区全部分类</button><button id="allRegionCategories">浏览所有地区</button></div><div id="categoryDirectory"></div></dialog>
+  <dialog id="phoneDialog" aria-labelledby="phoneTitle"><div class="dialog-heading"><div><p class="dialog-kicker">把下一站，带在身边</p><h2 id="phoneTitle">在手机上打开</h2></div><button id="closePhone" class="icon-button" aria-label="关闭手机访问">×</button></div><div id="phoneQr" class="phone-qr"></div><p id="phoneMessage" aria-live="polite">正在获取访问地址…</p><a id="phoneLink" class="phone-link"></a><button id="copyPhone" hidden>复制手机访问地址</button><p id="phoneInstructions" class="coverage-note">手机与电脑连接同一 Wi-Fi，并保持这台电脑和地图服务开启。也可以在手机浏览器中添加到主屏幕。</p></dialog>
+  <dialog id="progressDialog" aria-labelledby="progressTitle">
+    <div class="dialog-heading"><div><p class="dialog-kicker">你的收藏，整理到这里</p><h2 id="progressTitle">整理进度</h2></div><button id="closeProgress" class="icon-button" aria-label="关闭整理进度">×</button></div>
+    <div id="progressContent"></div>
+    <p id="coverage" class="coverage-note"></p>
+    <div class="data-actions"><label class="button secondary" tabindex="0" role="button" id="importLabel">导入收藏<input id="file" type="file" accept=".json,application/json" hidden></label><button id="export">导出本地备份</button><a href="guide.html" target="_blank" rel="noreferrer">导出说明</a></div>
+  </dialog>
+  <dialog id="precisionDialog" aria-labelledby="precisionTitle"><div class="dialog-heading"><h2 id="precisionTitle">地图上的位置有多准？</h2><button id="closePrecision" class="icon-button" aria-label="关闭定位说明">×</button></div><p>地图保留与原帖对应的具体地点。每个地点弹窗都附有地址和核对来源。</p><dl class="precision-list"><dt>商户地点</dt><dd>使用对应门店的公开地图位置；室内入口请结合地址查看。</dd><dt>地点 / 步道入口</dt><dd>已核对具体地点或路线起点。路线标记不代表完整轨迹。</dd></dl><p class="coverage-note">“未上图”表示这条收藏暂时没有地图标记，也包括没有实体地点和目的地在港深以外的收藏。合集可能只定位了其中一部分。</p></dialog>
+  <dialog id="edit" aria-labelledby="editHeading"><form method="dialog"><h2 id="editHeading">确认收藏地点</h2><p id="editTitle"></p><p id="hints"></p><label>搜索店名 / 地址<input id="geoquery" placeholder="城市 + 店名 / 地址"></label><button type="button" id="geosearch">搜索候选地点</button><p>查询词会发送到 OpenStreetMap Nominatim。</p><div id="georesults" aria-live="polite"></div><hr><label>地点名称<input id="place" required></label><label>纬度（−90 到 90）<input id="lat" type="number" step="any" min="-90" max="90" required></label><label>经度（−180 到 180）<input id="lng" type="number" step="any" min="-180" max="180" required></label><label class="checkbox-label"><input id="append" type="checkbox"> 添加为新地点，保留原有地点</label><p>使用 WGS84 坐标；高德 / 腾讯坐标请先转换。</p><div class="actions"><button value="cancel" formnovalidate>取消</button><button id="save" value="save" class="primary">保存地点</button></div></form></dialog>
+  <dialog id="photoViewer" aria-label="收藏照片"><div class="photo-toolbar"><div><strong id="photoCaption"></strong><p>原笔记配图 · 合集照片不一定对应每个地点</p></div><button id="closePhoto" class="icon-button" type="button" aria-label="关闭照片">×</button></div><img id="largePhoto" alt="原笔记照片"><div class="photo-navigation"><button id="prevPhoto" type="button">← 上一张</button><span id="photoCount"></span><button id="nextPhoto" type="button">下一张 →</button></div></dialog>
+  <script src="vendor/qrcode.js"></script><script src="vendor/leaflet.js"></script><script type="module" src="app.js"></script>
+</body>
+</html>

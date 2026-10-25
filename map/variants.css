@@ -1,0 +1,284 @@
+/* Three complete local views share the same notes, filters and location policy. */
+body[data-ui]{--surface:#fff;--soft:#eef3f8;--paper:#f8fafc;--accent:#345e87;--ink:#253f5d;--muted:#61768d;--line:#dce5ee;--pine:var(--accent);background:var(--paper);color:var(--ink);font-family:"Hiragino Sans GB","PingFang SC","Avenir Next",sans-serif}
+body[data-ui] .app-header{height:76px;background:var(--surface);padding:0 24px;gap:20px}
+body[data-ui] .workspace{height:calc(100dvh - 76px);position:relative}
+body[data-ui] .brand{font-size:22px;letter-spacing:-.5px;white-space:nowrap}
+body[data-ui] .brand small{font-size:10px;letter-spacing:0}
+body[data-ui] .brand-mark{background:var(--accent);width:38px;height:38px;font-size:32px}
+body[data-ui] .variant-links{display:flex;align-items:center;gap:4px;border:0;margin:0;padding:4px;background:var(--soft);border-radius:12px;flex-shrink:0}
+body[data-ui] .variant-links a{color:var(--muted);padding:8px 15px;font-size:12px;white-space:nowrap;border-radius:9px;text-decoration:none;min-height:36px}
+body[data-ui] .variant-links a[aria-current]{color:var(--accent);background:var(--surface);box-shadow:0 2px 5px #243b5310;font-weight:600}
+body[data-ui] .header-actions{gap:8px;min-width:0}
+body[data-ui] .version-compare{font-size:12px;white-space:nowrap;color:var(--accent);padding:9px 4px}
+body[data-ui] .progress-trigger{font-size:11px;max-width:205px;white-space:nowrap;background:var(--paper);border-color:var(--line)}
+body[data-ui] .progress-trigger>span:last-child{display:none}
+body[data-ui] .phone-trigger{font-size:11px;white-space:nowrap;background:var(--paper);border-color:var(--line)}
+.board-map-toggle,.category-rail,.map-category-launch{display:none}
+body[data-ui] .discovery-entry{padding:8px 12px;border-radius:8px;background:var(--accent);color:white;font-size:12px;white-space:nowrap;text-decoration:none;min-height:36px;display:flex;align-items:center}
+body[data-ui] aside{background:var(--surface)}
+body[data-ui] .browse-head{position:relative;padding:24px 22px 0;background:var(--surface)}
+body[data-ui] .section-title{align-items:flex-start;margin:0 0 18px;gap:10px}
+body[data-ui] .section-title h1{font-size:26px;line-height:1.45;letter-spacing:-1px;font-weight:650;max-width:15em}
+body[data-ui] .section-title>span{font-size:11px;white-space:nowrap;padding-top:9px}
+.browse-description{font-size:12px;line-height:1.6;margin:7px 0 0;color:var(--muted)}
+body[data-ui] .search-field{background:var(--paper);border-color:var(--line);height:44px;border-radius:10px}
+body[data-ui] .search-field input{font-size:13px}
+.category-launch{display:flex;align-items:center;justify-content:space-between;margin:12px 0 8px;gap:8px}
+.category-launch button{display:flex;align-items:center;gap:7px;max-width:78%;min-height:36px;padding:4px 0;background:none;border:0;font-size:12px;color:var(--accent)}
+.category-launch button>span:first-child{font-size:21px}.category-launch button>span:last-child{margin-left:4px;font-size:16px}
+#activeCategoryLabel{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#categoryScope{font-size:11px;color:var(--muted);white-space:nowrap}
+.theme-tabs{display:flex;gap:5px;overflow-x:auto;scrollbar-width:none;margin-bottom:12px;padding:1px 1px 4px}
+.theme-tabs::-webkit-scrollbar{display:none}
+.theme-tabs .theme-button{display:flex;align-items:center;gap:5px;flex-shrink:0;padding:6px 9px;font-size:12px;border-radius:6px;background:var(--paper);border-color:var(--line);min-height:34px}
+.theme-tabs .theme-button small{font-size:10px;color:var(--muted)}
+.theme-tabs .theme-button.active{background:var(--accent);border-color:var(--accent);color:white}
+.theme-tabs .theme-button.active small{color:#ffffffc9}
+body[data-ui] .filter-row{margin-top:0}
+body[data-ui] .filter-row select{border-color:var(--line);background:var(--surface);font-size:12px}
+body[data-ui] .food-filters{gap:4px;margin-top:10px}
+body[data-ui] .food-filters button{background:var(--soft);color:var(--muted);border-radius:7px;min-height:43px;font-size:12px}
+body[data-ui] .food-filters button.active{background:var(--surface);color:var(--accent);border-color:var(--accent)}
+body[data-ui] .browse-head nav{margin-top:10px}
+body[data-ui] .list-caption{font-size:11px;padding-top:8px}
+body[data-ui] #list{padding:0 22px 18px}
+body[data-ui] .card{padding:18px 0;border-color:var(--line)}
+.card-labels{display:flex;flex-wrap:wrap;align-items:center;gap:5px;margin-bottom:6px}
+body[data-ui] .card-category{color:var(--accent);font-size:11px;margin:0;font-weight:600}
+.card-food-label{font-size:10px;color:var(--muted);padding-left:5px;border-left:1px solid var(--line)}
+body[data-ui] .card h3{font-size:15px;font-weight:600;line-height:1.55}
+body[data-ui] .card-address{font-size:12px;color:var(--muted)}
+body[data-ui] .map-action{background:var(--soft);color:var(--accent);border:1px solid transparent;font-size:11px}
+body[data-ui] .card .status{font-size:11px}
+body[data-ui] .card .status.located{color:var(--accent)}
+body[data-ui] .quick-actions{gap:9px}
+body[data-ui] .quick-actions a{font-size:11px}
+body[data-ui] .card-details>summary{font-size:11px}
+body[data-ui] footer{font-size:10px;padding:11px 22px}
+body[data-ui] .map-style-control button.active,body[data-ui] .mobile-dock button.active{background:var(--accent)}
+body[data-ui] .map-heading,body[data-ui] .mapbar>button{box-shadow:0 3px 20px #263f5910}
+body[data-ui] .map-heading{border-radius:10px}
+body[data-ui] .map-pin{background:var(--accent)}
+body[data-ui] .pin-outdoor{background:var(--outdoor)}body[data-ui] .pin-art{background:var(--art)}
+body[data-ui] .map-category-launch{position:absolute;z-index:450;background:var(--surface);border-color:var(--line);color:var(--accent);min-height:44px;padding:9px 15px;border-radius:12px}
+body[data-ui] .category-dialog{width:min(780px,calc(100vw - 32px));max-height:88dvh;background:var(--surface);color:var(--ink);padding:28px}
+.category-dialog h2{margin:0;font-size:26px}.category-dialog .dialog-heading p{color:var(--muted);font-size:12px;margin:5px 0 0}
+.directory-tools{display:flex;gap:8px;margin-bottom:24px;flex-wrap:wrap}
+.directory-tools button{font-size:12px;min-height:40px;background:var(--paper);border-color:var(--line)}
+.directory-tools .all-categories{background:var(--accent);color:white;border-color:var(--accent)}
+.directory-group{margin:0 0 22px;break-inside:avoid}
+.directory-heading{display:flex;align-items:center;gap:8px;border:0;background:none;padding:0 0 10px;width:100%;text-align:left;min-height:36px}
+.directory-heading>span{font-size:21px;width:24px;color:var(--accent)}.directory-heading strong{font-size:15px;font-weight:600}.directory-heading small{margin-left:auto;color:var(--muted);font-size:11px}
+.directory-items{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}
+.directory-category{display:flex;align-items:center;gap:7px;justify-content:space-between;text-align:left;border-radius:8px;padding:9px 11px;background:var(--paper);border-color:var(--line);font-size:12px;min-height:42px}
+.directory-category small{font-size:10px;color:var(--muted)}.directory-category.active{border-color:var(--accent);background:var(--soft)}
+
+/* A: a cool, open coastal atlas. */
+body[data-ui="atlas"] aside{width:410px}
+body[data-ui="atlas"] .brand-mark{border-radius:50% 50% 50% 9px}
+body[data-ui="atlas"] .note-photo{border-radius:10px;height:144px}
+body[data-ui="atlas"] .card-summary{grid-template-columns:108px minmax(0,1fr);gap:14px}
+body[data-ui="atlas"] .note-photo{width:108px}
+body[data-ui="atlas"] .section-title>span{display:none}
+body[data-ui="atlas"] .map-legend{border-radius:12px}
+
+/* B: a library with a true theme rail, two-column reading area and a small map. */
+body[data-ui="shelves"]{--surface:#fff;--paper:#f3f7f3;--soft:#e8f0e9;--accent:#286451;--ink:#244139;--muted:#6b8176;--line:#dce6df;--outdoor:#7d9a65;--art:#a18495}
+body[data-ui="shelves"] .brand-mark{border-radius:8px;font-size:28px}
+body[data-ui="shelves"] .category-rail{display:flex;flex-direction:column;width:190px;flex-shrink:0;overflow:auto;padding:26px 14px;background:var(--paper);border-right:1px solid var(--line);gap:5px}
+.rail-title{font-size:12px;color:var(--muted);margin:0 12px 12px}.rail-note{font-size:11px;line-height:1.8;color:var(--muted);margin:24px 12px 0}
+.category-rail .theme-button{display:flex;gap:9px;align-items:center;padding:12px 10px;text-align:left;background:none;border:1px solid transparent;min-height:48px;font-size:12px;border-radius:7px}
+.category-rail .theme-button i{font-style:normal;font-size:19px;width:23px;color:var(--muted)}.category-rail .theme-button small{margin-left:auto;font-size:10px;color:var(--muted)}
+.category-rail .theme-button.active{background:var(--surface);border-color:var(--line);color:var(--accent);font-weight:650}
+body[data-ui="shelves"] aside{width:auto;flex:1;min-width:360px;border:0}
+body[data-ui="shelves"] main{width:28%;flex:none;border-left:1px solid var(--line)}
+body[data-ui="shelves"] .browse-head{padding:26px 26px 0}
+body[data-ui="shelves"] .section-title h1{font-size:28px}
+body[data-ui="shelves"] .theme-tabs{display:none}
+body[data-ui="shelves"] .category-launch{margin:9px 0 12px}
+body[data-ui="shelves"] .filter-row{grid-template-columns:1fr 1fr}
+body[data-ui="shelves"] #list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-content:start;gap:0 22px;padding:0 26px 26px}
+body[data-ui="shelves"] .card-summary{grid-template-columns:76px minmax(0,1fr);gap:12px}
+body[data-ui="shelves"] .note-photo{width:76px;height:112px;border-radius:5px}
+body[data-ui="shelves"] .card h3{font-size:14px}
+body[data-ui="shelves"] .card .status{font-size:10px}
+body[data-ui="shelves"] .card-address{font-size:11px;-webkit-line-clamp:1}
+body[data-ui="shelves"] .card-food-label{display:none}
+body[data-ui="shelves"] .quick-actions{gap:8px;flex-wrap:wrap}
+body[data-ui="shelves"] .quick-actions button{padding:4px 7px;min-height:32px}
+body[data-ui="shelves"] .mapbar{top:18px;left:14px;right:14px;display:block}
+body[data-ui="shelves"] .mapbar #fit{margin-top:9px;font-size:11px;padding:8px 10px}
+body[data-ui="shelves"] .map-heading{width:100%;padding:12px}
+body[data-ui="shelves"] .map-style-control{top:152px;right:14px}
+body[data-ui="shelves"] .leaflet-top{top:216px}
+body[data-ui="shelves"] .map-legend{left:12px;right:12px;bottom:28px;gap:8px;font-size:10px;padding:9px}
+body[data-ui="shelves"] .map-legend button{font-size:10px}
+body[data-ui="shelves"][data-map-style="abstract"] #map{background:#e5eeea;background-image:radial-gradient(#a6bfb344 .8px,transparent .8px);background-size:20px 20px}
+body[data-ui="shelves"] .coast-shape{fill:#f6f9f4;stroke:#c9dcd0}
+body[data-ui="shelves"] .area-label{color:#849c8c}
+body[data-ui="shelves"] .area-label.city{color:#789486}
+body[data-ui="shelves"] .cluster-marker span{color:var(--accent);border-color:#97b5a894}
+
+/* C: original images become the browsing surface; open the map when needed. */
+body[data-ui="gallery"]{--paper:#f6f3f8;--surface:#fff;--soft:#f0eaf3;--accent:#765074;--ink:#493c50;--muted:#88788d;--line:#e8dfeb;--outdoor:#748e83;--art:#a375aa}
+body[data-ui="gallery"] .brand-mark{border-radius:50%;background:none;border:1px solid var(--accent);color:var(--accent)}
+body[data-ui="gallery"] .board-map-toggle{display:block;min-height:38px;background:var(--accent);color:white;border-color:var(--accent);font-size:12px}
+body[data-ui="gallery"] aside{width:100%;border:0;background:var(--paper)}
+body[data-ui="gallery"] .browse-head{background:var(--paper);padding:24px 34px 0;display:grid;grid-template-columns:minmax(250px,1.1fr) minmax(240px,1fr) minmax(240px,.9fr);column-gap:24px;align-items:center}
+body[data-ui="gallery"] .section-title{grid-column:1;grid-row:1/3;margin:0 0 14px}
+body[data-ui="gallery"] .section-title h1{font-family:"Songti SC","Noto Serif CJK SC",serif;font-size:30px;letter-spacing:-.5px;font-weight:600}
+body[data-ui="gallery"] .section-title>span{display:none}
+body[data-ui="gallery"] .search-field{grid-column:2;grid-row:1}
+body[data-ui="gallery"] .category-launch{grid-column:3;grid-row:1;margin:0}
+body[data-ui="gallery"] .filter-row{grid-column:2;grid-row:2;margin:8px 0 12px}
+body[data-ui="gallery"] .food-filters{grid-column:3;grid-row:2;margin:8px 0 12px;align-self:stretch}
+body[data-ui="gallery"] .food-filters button{background:transparent;flex-direction:row;gap:4px;min-height:38px;border-color:var(--line)}
+body[data-ui="gallery"] .food-filters button.active{background:var(--accent);color:white;border-color:var(--accent)}
+body[data-ui="gallery"] .theme-tabs{grid-column:1/3;grid-row:3;margin:0;padding-bottom:8px}
+body[data-ui="gallery"] .browse-head nav{grid-column:3;grid-row:3;margin:0;border:0}
+body[data-ui="gallery"] .browse-head nav button{padding:5px 0 10px}
+body[data-ui="gallery"] .list-caption{grid-column:1/-1;border-top:1px solid var(--line);padding:11px 0 12px}
+body[data-ui="gallery"] .cuisine-field{grid-column:1/-1;margin:0 0 10px}
+body[data-ui="gallery"] .food-hint{grid-column:1/-1;margin:0 0 10px}
+body[data-ui="gallery"] #list{display:block;columns:auto;padding:5px 34px 30px;background:var(--paper)}
+body[data-ui="gallery"] .gallery-grid{columns:4;column-gap:20px}
+body[data-ui="gallery"] .card{display:inline-block;width:100%;break-inside:avoid;padding:0;background:var(--surface);border:0;border-radius:14px;overflow:hidden;margin:0 0 20px}
+body[data-ui="gallery"] .card.selected{box-shadow:0 0 0 2px var(--accent)}
+body[data-ui="gallery"] .card-summary{display:block}
+body[data-ui="gallery"] .note-photo{width:100%;height:auto;aspect-ratio:1.08;max-height:340px;object-fit:cover;border-radius:0}
+body[data-ui="gallery"] .card:nth-child(3n+2) .cover-wrap>.note-photo{aspect-ratio:.82}
+body[data-ui="gallery"] .card-info{padding:15px 16px 4px}
+body[data-ui="gallery"] .card-labels{margin-bottom:7px}
+body[data-ui="gallery"] .card h3{font-size:15px}
+body[data-ui="gallery"] .card-address{-webkit-line-clamp:1;margin:7px 0}
+body[data-ui="gallery"] .card-details{margin:0;padding:0 16px 13px}
+body[data-ui="gallery"] .card-details>summary{padding-top:4px}
+body[data-ui="gallery"] .photo-grid .note-photo{aspect-ratio:1;height:auto}
+body[data-ui="gallery"] .photo-error{display:grid;place-items:center;aspect-ratio:1.2;background:var(--soft)}
+body[data-ui="gallery"] main{display:none;position:absolute;inset:0;width:100%;height:100%;z-index:600}
+body[data-ui="gallery"].mobile-map main{display:block;visibility:visible}
+body[data-ui="gallery"].mobile-map aside{visibility:hidden}
+body[data-ui="gallery"] footer{display:none}
+
+@media(min-width:821px) and (max-width:1250px){
+ body[data-ui="shelves"] .leaflet-popup-content{width:clamp(155px,calc(27vw - 60px),255px)!important}
+ body[data-ui] .app-header{padding:0 18px;gap:12px}
+ body[data-ui] .brand small{display:none}
+ body[data-ui] .phone-trigger span{display:none}
+ body[data-ui] .variant-links a{padding:8px 11px}
+ body[data-ui] .progress-trigger{max-width:155px;overflow:hidden}
+ body[data-ui] .progress-trigger #progressLabel{overflow:hidden;text-overflow:ellipsis}
+ body[data-ui="atlas"] aside{width:360px}
+ body[data-ui="shelves"] .category-rail{width:165px}
+ body[data-ui="shelves"] main{width:27%;min-width:220px}
+ body[data-ui="shelves"] aside{min-width:330px}
+ body[data-ui="shelves"] #list{grid-template-columns:1fr}
+ body[data-ui="shelves"] .card-summary{grid-template-columns:95px minmax(0,1fr)}
+ body[data-ui="shelves"] .note-photo{width:95px;height:124px}
+ body[data-ui="gallery"] .gallery-grid{columns:3}
+ body[data-ui="gallery"] .browse-head{column-gap:16px;grid-template-columns:1fr 1fr}
+ body[data-ui="gallery"] .section-title{grid-column:1;grid-row:1/3}
+ body[data-ui="gallery"] .category-launch{grid-column:1;grid-row:3}
+ body[data-ui="gallery"] .theme-tabs{grid-column:1/-1;grid-row:4}
+ body[data-ui="gallery"] .food-filters{grid-column:2;grid-row:3;margin-top:0}
+ body[data-ui="gallery"] .browse-head nav{grid-column:2;grid-row:5}
+ body[data-ui="gallery"] .list-caption{grid-column:1;grid-row:5;border:0}
+}
+@media(max-width:820px){
+ body[data-ui] .app-header{height:calc(62px + env(safe-area-inset-top));padding:env(safe-area-inset-top) 14px 0;gap:10px}
+ body[data-ui] .workspace{height:calc(100dvh - 62px - env(safe-area-inset-top))}
+ body[data-ui] .brand{font-size:19px;gap:8px}
+ body[data-ui] .brand-mark{width:32px;height:32px;font-size:28px}
+ body[data-ui] .brand small{display:none}
+ body[data-ui] .variant-links{display:none}
+ body[data-ui] .header-actions{margin-left:auto;gap:8px}
+ body[data-ui] .version-compare{font-size:11px;min-height:40px;display:flex;align-items:center}
+ body[data-ui] .discovery-entry{font-size:11px;min-height:38px;padding:7px 9px}
+ body[data-ui] .version-compare{font-size:0;padding:0}
+ body[data-ui] .version-compare:after{content:'三版';font-size:11px}
+ body[data-ui] .phone-trigger{display:none}
+ body[data-ui] .progress-trigger{max-width:43px;min-width:40px;min-height:40px;padding:8px;background:var(--soft);font-size:0}
+ body[data-ui] .progress-trigger:after{content:'⋯';font-size:23px;line-height:1}
+ body[data-ui] .progress-trigger>span{display:none}
+ body[data-ui] aside{width:100%;min-width:0;height:100%}
+ body[data-ui] .browse-head{display:block;padding:14px 14px 0;flex-shrink:0}
+ body[data-ui] .section-title{margin:0 0 10px;min-height:32px;align-items:center}
+ body[data-ui] .section-title h1{font-size:21px;line-height:1.5;letter-spacing:-.5px;max-width:calc(100vw - 170px)}
+ body[data-ui] .section-title>span,body[data-ui] .browse-description{display:none}
+ body[data-ui] .category-launch{position:absolute;top:13px;right:14px;margin:0;height:36px;max-width:145px}
+ body[data-ui] .category-launch button{font-size:11px;max-width:100%;gap:5px;min-height:36px;padding:0}
+ body[data-ui] .category-launch button>span:first-child{font-size:20px}
+ body[data-ui] .category-launch button>span:last-child{display:none}
+ body[data-ui] #activeCategoryLabel{max-width:100px}
+ body[data-ui] #categoryScope{display:none}
+ body[data-ui] .search-field{height:44px;border-radius:10px}
+ body[data-ui] .search-field input{font-size:16px}
+ body[data-ui] .theme-tabs{display:flex;margin:10px -14px 8px;padding:0 14px 3px;gap:6px}
+ body[data-ui] .theme-tabs .theme-button{min-height:36px;padding:6px 10px;border-radius:6px;font-size:12px}
+ body[data-ui] .filter-row{grid-template-columns:1fr 1.25fr;gap:7px;margin:0}
+ body[data-ui] .filter-row select{height:40px;font-size:13px;padding:7px 10px}
+ body[data-ui] .food-filters{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));margin:9px 0 0;gap:4px}
+ body[data-ui] .food-filters button{min-height:40px;flex-direction:row;gap:4px;font-size:12px;padding:6px 4px}
+ body[data-ui] .food-filters button small{font-size:10px}
+ body[data-ui] .browse-head nav{margin:8px 0 0;gap:0;min-height:38px;border-bottom:1px solid var(--line)}
+ body[data-ui] .browse-head nav button{min-height:38px;font-size:13px;padding:8px 0}
+ body[data-ui] .browse-head nav button span{font-size:11px}
+ body[data-ui] .list-caption{min-height:32px;padding:3px 0 0;font-size:11px;border:0}
+ body[data-ui] .list-caption button{min-height:32px;font-size:11px}
+ body[data-ui] .food-hint{display:none}
+ body[data-ui] .cuisine-field{margin:8px 0 0}
+ body[data-ui] #list{display:block;columns:auto;padding:0 14px calc(90px + env(safe-area-inset-bottom));gap:0}
+ body[data-ui] .card{padding:16px 0}
+ body[data-ui] .card-summary{display:grid;grid-template-columns:96px minmax(0,1fr);gap:12px}
+ body[data-ui] .note-photo{width:96px;height:134px;border-radius:9px}
+ body[data-ui] .card h3{font-size:15px;line-height:1.55}
+ body[data-ui] .card-category{font-size:11px}
+ body[data-ui] .card-food-label{font-size:10px}
+ body[data-ui] .card-address{font-size:11px;line-height:1.6}
+ body[data-ui] .quick-actions{margin-top:5px;gap:10px}
+ body[data-ui] .quick-actions button,body[data-ui] .quick-actions a{min-height:36px;font-size:11px}
+ body[data-ui] .card-details>summary{min-height:36px;font-size:11px}
+ body[data-ui] .mobile-dock{border-color:var(--line);box-shadow:0 5px 24px #243b531a}
+ body[data-ui] .mobile-dock button{min-height:44px;padding:9px 25px;color:var(--accent)}
+ body[data-ui] .mobile-dock button.active{color:white}
+ body[data-ui] .mapbar{display:flex;top:14px;left:12px;right:12px;gap:6px}
+ body[data-ui] .map-heading{width:auto;padding:9px 10px;gap:8px}
+ body[data-ui] .map-heading strong{font-size:12px}
+ body[data-ui] .map-heading div>span{font-size:10px}
+ body[data-ui] .mapbar #fit{margin:0;min-height:43px;padding:9px 10px;font-size:11px}
+ body[data-ui] .map-category-launch{display:block;top:83px;left:13px;min-height:43px;font-size:13px}
+ body[data-ui] .map-style-control{top:83px;right:12px}
+ body[data-ui] .map-style-control button{min-height:36px;padding:7px 12px;font-size:12px}
+ body[data-ui] .leaflet-top{top:144px}
+ body[data-ui] .leaflet-left{left:3px}
+ body[data-ui] main{position:absolute;inset:0;width:100%;height:100%;flex:none;border:0;visibility:hidden}
+ body[data-ui].mobile-map main{visibility:visible}
+ body[data-ui] .map-legend{left:50%;right:auto;bottom:calc(86px + env(safe-area-inset-bottom));gap:9px;font-size:9px;padding:8px 10px}
+ body[data-ui] .map-legend button{font-size:10px}
+ body[data-ui] .category-rail,body[data-ui] footer,body[data-ui] .board-map-toggle{display:none}
+ body[data-ui] .category-dialog{width:calc(100vw - 18px);max-height:88dvh;padding:20px;border-radius:18px}
+ body[data-ui] .directory-items{grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+ body[data-ui] .directory-category{font-size:12px;min-height:44px}
+ body[data-ui] .directory-heading{min-height:40px}
+ body[data-ui="gallery"] #list{padding-top:8px;background:var(--paper)}
+ body[data-ui="gallery"] .gallery-grid{columns:2;column-gap:10px}
+ body[data-ui="gallery"] .card{margin-bottom:10px;padding:0;border-radius:10px}
+ body[data-ui="gallery"] .card-summary{display:block}
+ body[data-ui="gallery"] .note-photo{width:100%;height:auto;border-radius:0;aspect-ratio:.88;max-height:none}
+ body[data-ui="gallery"] .card:nth-child(3n+2) .cover-wrap>.note-photo{aspect-ratio:.76}
+ body[data-ui="gallery"] .card-info{padding:11px 10px 0}
+ body[data-ui="gallery"] .card-labels{gap:3px;margin-bottom:5px}
+ body[data-ui="gallery"] .card-category{font-size:10px}
+ body[data-ui="gallery"] .card-food-label{display:none}
+ body[data-ui="gallery"] .card h3{font-size:13px}
+ body[data-ui="gallery"] .card-address,body[data-ui="gallery"] .card-cuisines{display:none}
+ body[data-ui="gallery"] .card .status{font-size:10px}
+ body[data-ui="gallery"] .quick-actions{display:flex;justify-content:space-between;gap:3px;margin:5px 0 0}
+ body[data-ui="gallery"] .quick-actions button{font-size:10px;padding:4px 6px;min-height:34px}
+ body[data-ui="gallery"] .quick-actions a{font-size:10px;min-height:34px}
+ body[data-ui="gallery"] .card-details{padding:0 10px 7px}
+ body[data-ui="gallery"] .card-details>summary{font-size:10px;min-height:30px}
+ body[data-ui="gallery"] .detail-content .management-row select{font-size:12px}
+ body[data-ui="gallery"] .detail-content .photo-grid{grid-template-columns:repeat(2,1fr)}
+}
+@media(max-width:359px){body[data-ui] .brand{font-size:17px}body[data-ui] .brand-mark{width:29px;height:29px}body[data-ui] .app-header{gap:4px;padding-left:12px;padding-right:12px}body[data-ui] .section-title h1{font-size:20px}body[data-ui] .category-launch{max-width:120px}body[data-ui] #activeCategoryLabel{max-width:86px}}

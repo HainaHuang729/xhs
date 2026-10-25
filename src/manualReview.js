@@ -20,7 +20,7 @@ export function buildManualReviewPayload({ notes, existingAlbums, config, granul
       granularity === "fine"
         ? "细粒度：可以按国家、城市、地区、路线或明确主题拆分，例如日本旅行、新疆路线。"
         : "粗粒度：优先合并为通用主题，例如日本旅行、泰国旅行、新疆旅行尽量合并为旅行。",
-      `常规分类上限为 ${config.maxCategories} 个；无法可靠归类的放入“其他”。`,
+      "分类数量不设上限；无法可靠归类的放入“其他”。",
       "优先复用 existingAlbums 中已有专辑名。",
       "每个序号必须且只能归入一个分类。"
     ],
@@ -31,7 +31,7 @@ export function buildManualReviewPayload({ notes, existingAlbums, config, granul
       ]
     },
     limits: {
-      maxCategories: config.maxCategories,
+      maxCategories: null,
       maxTitlesForPrompt: config.maxTitlesForPrompt,
       selectedTitleCount: selected.length,
       totalTitleCount: (notes || []).length
@@ -52,7 +52,7 @@ export function buildManualReviewPrompt(payload) {
   return [
     "请帮我给小红书收藏笔记做专辑分类。",
     `分类粒度：${payload.granularity === "fine" ? "细粒度" : "粗粒度"}`,
-    `常规分类上限：${payload.limits.maxCategories}`,
+    "分类数量不设上限。",
     `已有专辑，优先复用：${existing}`,
     "要求：每个序号必须且只能归入一个分类；无法可靠归类放入“其他”；只返回 JSON，不要解释。",
     'JSON 格式：{"items":[{"i":1,"name":"旅行"},{"i":2,"name":"美食"}]}',
@@ -87,10 +87,7 @@ export function manualAssignmentsToPlan(input, notes, existingAlbums, config, gr
     if (!isOtherName(name)) {
       const key = categoryKey(name) || compactTitle(name);
       if (!categories.has(key)) {
-        const regularCount = Array.from(categories.values()).filter(isRegularCategory).length;
-        if (regularCount < config.maxCategories || existingNames.has(name)) {
-          categories.set(key, { name, title: name, intro: "", count: 0, titles: [], isExisting: existingNames.has(name) });
-        }
+        categories.set(key, { name, title: name, intro: "", count: 0, titles: [], isExisting: existingNames.has(name) });
       }
       category = categories.get(key) || other;
     }
@@ -117,7 +114,7 @@ export function manualAssignmentsToPlan(input, notes, existingAlbums, config, gr
     analyzedTitleCount: selected.length,
     totalTitleCount: (notes || []).length,
     titleSelectionLimit: config.maxTitlesForPrompt,
-    categoryLimit: config.maxCategories,
+    categoryLimit: null,
     batchSize: selected.length,
     existingAlbumCount: (existingAlbums || []).length,
     granularity,

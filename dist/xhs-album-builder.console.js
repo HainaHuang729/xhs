@@ -12,7 +12,6 @@ const DEFAULT_CONFIG = {
   scrollDelay: 720,
   stableRoundsToStop: 5,
   maxTitlesForPrompt: 500,
-  maxCategories: 20,
   classificationBatchSize: 100,
   maxClassificationContextCategories: 20,
   llmBatchTimeoutMs: 45_000,
@@ -28,7 +27,6 @@ const integerKeys = {
   maxScrollRounds: [1, 1000],
   stableRoundsToStop: [1, 20],
   maxTitlesForPrompt: [1, 20_000],
-  maxCategories: [1, 200],
   classificationBatchSize: [20, 500],
   maxClassificationContextCategories: [1, 200],
   llmBatchTimeoutMs: [5_000, 180_000],
@@ -45,6 +43,8 @@ function getConfig() {
 
 function normalizeConfig(input) {
   const config = { ...input };
+  // Ignore category caps left in configuration from older versions.
+  delete config.maxCategories;
   for (const [key, [min, max]] of Object.entries(integerKeys)) {
     const value = Math.floor(Number(config[key]));
     config[key] = Number.isFinite(value) ? Math.max(min, Math.min(max, value)) : DEFAULT_CONFIG[key];
@@ -686,14 +686,9 @@ function usedRegularCount(categoryMap) {
   return Array.from(categoryMap.values()).filter((category) => isRegularCategory(category) && (category.titles?.length || !category.isExisting)).length;
 }
 
-function canAddCategory(categoryMap, config) {
-  return usedRegularCount(categoryMap) < config.maxCategories;
-}
-
-function createExistingCategoryMap(existingAlbumNames, config) {
+function createExistingCategoryMap(existingAlbumNames) {
   const map = new Map();
   for (const rawName of existingAlbumNames || []) {
-    if (map.size >= Math.min(config.maxCategories, config.maxClassificationContextCategories)) break;
     const name = cleanCategoryName(rawName, map.size);
     if (!name || isOtherName(name)) continue;
     const key = categoryKey(name);
@@ -729,7 +724,7 @@ function localCategoryForTitle(title, granularity) {
   return rules.find(([, keys]) => keys.some((key) => text.includes(key)))?.[0] || OTHER_CATEGORY_NAME;
 }
 
-function assignLocally(batch, categoryMap, otherCategory, granularity, config) {
+function assignLocally(batch, categoryMap, otherCategory, granularity) {
   for (const note of batch) {
     const title = normalizeText(note.title);
     if (!title) continue;
@@ -739,7 +734,7 @@ function assignLocally(batch, categoryMap, otherCategory, granularity, config) {
       const localName = localCategoryForTitle(title, granularity);
       if (!isOtherName(localName)) {
         const key = categoryKey(localName);
-        if (!categoryMap.has(key) && canAddCategory(categoryMap, config)) {
+        if (!categoryMap.has(key)) {
           categoryMap.set(key, { name: localName, title: localName, intro: "", count: 0, titles: [], isExisting: false });
         }
         category = categoryMap.get(key);
@@ -789,7 +784,7 @@ function buildPrompt(batch, categoryMap, batchIndex, batchCount, granularity, co
   const context = [
     ...categories.filter((category) => category.titles?.length || !category.isExisting),
     ...categories.filter((category) => category.isExisting && !category.titles?.length)
-  ].slice(0, Math.min(config.maxCategories, config.maxClassificationContextCategories));
+  ].slice(0, config.maxClassificationContextCategories);
 
   const contextText = context.length
     ? context.map((category, index) => {
@@ -798,24 +793,21 @@ function buildPrompt(batch, categoryMap, batchIndex, batchCount, granularity, co
       }).join("\n")
     : "\u6682\u65e0\u5df2\u6709\u5206\u7c7b\u3002";
 
-  const remaining = Math.max(0, config.maxCategories - usedRegularCount(categoryMap));
   const granularityInstruction =
     granularity === "fine"
       ? "\u5f53\u524d\u4e3a\u7ec6\u7c92\u5ea6\uff1a\u5141\u8bb8\u6309\u56fd\u5bb6\u3001\u57ce\u5e02\u3001\u5730\u533a\u3001\u8def\u7ebf\u3001\u5185\u5bb9\u4e3b\u9898\u7ee7\u7eed\u62c6\u5206\u3002\u4f8b\u5982\u201c\u65e5\u672c\u65c5\u884c\u201d\u548c\u201c\u6cf0\u56fd\u65c5\u884c\u201d\u53ef\u4ee5\u5206\u522b\u5f52\u4e3a\u201c\u65e5\u672c\u65c5\u884c\u201d\u201c\u6cf0\u56fd\u65c5\u884c\u201d\uff1b\u4f46\u4ecd\u8981\u907f\u514d\u4e3a\u5355\u7bc7\u6807\u9898\u5355\u72ec\u5efa\u7c7b\u3002"
       : "\u5f53\u524d\u4e3a\u7c97\u7c92\u5ea6\uff1a\u4f18\u5148\u5408\u5e76\u4e3a\u66f4\u5927\u7684\u901a\u7528\u4e3b\u9898\uff0c\u4e0d\u6309\u56fd\u5bb6\u3001\u57ce\u5e02\u6216\u8def\u7ebf\u8fc7\u5ea6\u62c6\u5206\u3002\u4f8b\u5982\u201c\u65e5\u672c\u65c5\u884c\u201d\u201c\u6cf0\u56fd\u65c5\u884c\u201d\u201c\u65b0\u7586\u65c5\u884c\u201d\u5e94\u4f18\u5148\u5408\u5e76\u4e3a\u201c\u65c5\u884c\u201d\uff1b\u53ea\u6709\u4e3b\u9898\u660e\u663e\u4e0d\u540c\u624d\u62c6\u5206\u3002";
   const addInstruction =
-    remaining > 0
-      ? granularity === "fine"
-        ? "\u53ea\u6709\u5f53\u6807\u9898\u65e0\u6cd5\u81ea\u7136\u5f52\u5165\u73b0\u6709\u5206\u7c7b\u65f6\uff0c\u624d\u53ef\u4ee5\u65b0\u589e\u66f4\u5177\u4f53\u5206\u7c7b\uff1b\u65b0\u589e\u5206\u7c7b\u540d\u53ef\u4ee5\u6309\u56fd\u5bb6\u3001\u57ce\u5e02\u3001\u5730\u533a\u3001\u8def\u7ebf\u6216\u660e\u786e\u4e3b\u9898\u62c6\u5206\uff0c\u4f46\u4e0d\u8981\u4e3a\u5355\u7bc7\u6807\u9898\u5355\u72ec\u5efa\u7c7b\u3002"
-        : "\u53ea\u6709\u5f53\u6807\u9898\u65e0\u6cd5\u81ea\u7136\u5f52\u5165\u73b0\u6709\u5206\u7c7b\u65f6\uff0c\u624d\u53ef\u4ee5\u65b0\u589e\u5bbd\u6cdb\u5206\u7c7b\uff1b\u65b0\u589e\u5206\u7c7b\u540d\u8981\u9002\u5408\u4f5c\u4e3a\u4e13\u8f91\u6807\u9898\uff0c\u7b80\u77ed\u81ea\u7136\uff0c\u4e0d\u8981\u592a\u7ec6\u3002"
-      : "\u5e38\u89c4\u5206\u7c7b\u5df2\u8fbe\u5230\u4e0a\u9650\uff0c\u7981\u6b62\u65b0\u589e\u5e38\u89c4\u5206\u7c7b\uff1b\u65e0\u6cd5\u5f52\u5165\u73b0\u6709\u5206\u7c7b\u7684\u6807\u9898\u5fc5\u987b\u653e\u5165\u201c\u5176\u4ed6\u201d\u3002";
+    granularity === "fine"
+      ? "\u53ea\u6709\u5f53\u6807\u9898\u65e0\u6cd5\u81ea\u7136\u5f52\u5165\u73b0\u6709\u5206\u7c7b\u65f6\uff0c\u624d\u53ef\u4ee5\u65b0\u589e\u66f4\u5177\u4f53\u5206\u7c7b\uff1b\u65b0\u589e\u5206\u7c7b\u540d\u53ef\u4ee5\u6309\u56fd\u5bb6\u3001\u57ce\u5e02\u3001\u5730\u533a\u3001\u8def\u7ebf\u6216\u660e\u786e\u4e3b\u9898\u62c6\u5206\uff0c\u4f46\u4e0d\u8981\u4e3a\u5355\u7bc7\u6807\u9898\u5355\u72ec\u5efa\u7c7b\u3002"
+      : "\u53ea\u6709\u5f53\u6807\u9898\u65e0\u6cd5\u81ea\u7136\u5f52\u5165\u73b0\u6709\u5206\u7c7b\u65f6\uff0c\u624d\u53ef\u4ee5\u65b0\u589e\u5bbd\u6cdb\u5206\u7c7b\uff1b\u65b0\u589e\u5206\u7c7b\u540d\u8981\u9002\u5408\u4f5c\u4e3a\u4e13\u8f91\u6807\u9898\uff0c\u7b80\u77ed\u81ea\u7136\uff0c\u4e0d\u8981\u592a\u7ec6\u3002";
   const titles = batch.map((note, index) => `${index + 1}. ${note.title}`).join("\n");
 
   return [
     "\u4f60\u662f\u5c0f\u7ea2\u4e66\u6536\u85cf\u6574\u7406\u52a9\u624b\u3002\u73b0\u5728\u6309\u6279\u6b21\u6574\u7406\u7528\u6237\u6536\u85cf\u7b14\u8bb0\u6807\u9898\uff0c\u5e76\u7ef4\u62a4\u4e00\u7ec4\u7a33\u5b9a\u7684\u5c0f\u7ea2\u4e66\u4e13\u8f91\u5206\u7c7b\u3002",
     `\u8fd9\u662f\u7b2c ${batchIndex + 1}/${batchCount} \u6279\uff0c\u6bcf\u6279\u6700\u591a ${config.classificationBatchSize} \u4e2a\u6807\u9898\u3002${granularityInstruction}`,
-    `\u5f53\u524d\u5df2\u6709/\u5df2\u65b0\u589e\u7684\u5e38\u89c4\u5206\u7c7b\u5982\u4e0b\u3002\u8bf7\u4f18\u5148\u590d\u7528\u8fd9\u4e9b\u5206\u7c7b\uff0c\u4e0d\u8981\u56e0\u4e3a\u8868\u8fbe\u7565\u6709\u5dee\u5f02\u5c31\u65b0\u589e\u5206\u7c7b\uff1a\n${contextText}`,
-    `\u5e38\u89c4\u5206\u7c7b\u603b\u4e0a\u9650\u4e3a ${config.maxCategories} \u4e2a\uff0c\u5f53\u524d\u5df2\u6709 ${usedRegularCount(categoryMap)} \u4e2a\u5df2\u4f7f\u7528\u5206\u7c7b\uff0c\u8fd8\u53ef\u4ee5\u65b0\u589e ${remaining} \u4e2a\u3002`,
+    `\u4ee5\u4e0b\u4e3a\u5f53\u524d\u5206\u7c7b\u7684\u53c2\u8003\u6837\u672c\u3002\u8bf7\u4f18\u5148\u590d\u7528\u5df2\u6709\u5206\u7c7b\uff0c\u4e0d\u8981\u56e0\u4e3a\u8868\u8fbe\u7565\u6709\u5dee\u5f02\u5c31\u65b0\u589e\u5206\u7c7b\uff1a\n${contextText}`,
+    `\u5206\u7c7b\u6570\u91cf\u4e0d\u8bbe\u4e0a\u9650\uff0c\u5f53\u524d\u5df2\u6709 ${usedRegularCount(categoryMap)} \u4e2a\u5df2\u4f7f\u7528\u5206\u7c7b\uff1b\u4ec5\u65e0\u6cd5\u53ef\u9760\u5f52\u7c7b\u7684\u6807\u9898\u653e\u5165\u201c\u5176\u4ed6\u201d\u3002`,
     addInstruction,
     "\u53ea\u505a\u672c\u6279\u6807\u9898\u5230\u5206\u7c7b\u540d\u7684\u6620\u5c04\uff0c\u4e0d\u8981\u89e3\u91ca\uff0c\u4e0d\u8981\u590d\u8ff0\u6807\u9898\u5168\u6587\u3002\u6bcf\u4e2a\u5e8f\u53f7\u5fc5\u987b\u4e14\u53ea\u80fd\u5f52\u5165\u4e00\u4e2a\u5206\u7c7b\u3002\u65e0\u6cd5\u53ef\u9760\u5f52\u5165\u5e38\u89c4\u5206\u7c7b\u7684\u5e8f\u53f7\u653e\u5165\u201c\u5176\u4ed6\u201d\u3002",
     '\u53ea\u8fd4\u56de JSON\uff0c\u7ed3\u6784\uff1a{"items":[{"i":1,"name":"\u5df2\u6709\u6216\u65b0\u589e\u4e13\u8f91\u6807\u9898"}]}\u3002i \u662f\u6807\u9898\u5e8f\u53f7\uff0cname \u662f\u5206\u7c7b\u540d\u3002',
@@ -824,7 +816,7 @@ function buildPrompt(batch, categoryMap, batchIndex, batchCount, granularity, co
   ].join("\n");
 }
 
-function applyLlmAssignments(batch, payload, categoryMap, otherCategory, config) {
+function applyLlmAssignments(batch, payload, categoryMap, otherCategory) {
   const assignments = Array.isArray(payload.items) ? payload.items : Array.isArray(payload.assignments) ? payload.assignments : [];
   if (!assignments.length) return false;
 
@@ -839,7 +831,7 @@ function applyLlmAssignments(batch, payload, categoryMap, otherCategory, config)
     const name = cleanCategoryName(rawName, categoryMap.size);
     if (!isOtherName(name)) {
       const key = categoryKey(name);
-      if (!categoryMap.has(key) && canAddCategory(categoryMap, config)) {
+      if (!categoryMap.has(key)) {
         categoryMap.set(key, { name, title: name, intro: "", count: 0, titles: [], isExisting: false });
       }
       category = categoryMap.get(key) || otherCategory;
@@ -863,7 +855,7 @@ async function classifyNotes(notes, existingAlbumNames, options, onProgress = ()
   const batches = [];
   for (let index = 0; index < selected.length; index += batchSize) batches.push(selected.slice(index, index + batchSize));
 
-  const categoryMap = createExistingCategoryMap(existingAlbumNames, config);
+  const categoryMap = createExistingCategoryMap(existingAlbumNames);
   const otherCategory = { name: OTHER_CATEGORY_NAME, title: OTHER_CATEGORY_NAME, intro: "\u672a\u80fd\u53ef\u9760\u5f52\u5165\u4e0a\u8ff0\u5206\u7c7b\u7684\u6536\u85cf\u7b14\u8bb0\uff0c\u4f5c\u4e3a\u5907\u6ce8\u4fdd\u7559\u3002", count: 0, titles: [], isOther: true };
   state.assignmentCache = new Map();
 
@@ -872,7 +864,7 @@ async function classifyNotes(notes, existingAlbumNames, options, onProgress = ()
 
     const batch = batches[index];
     if (!window.LLMBridge || typeof window.LLMBridge.chat !== "function") {
-      assignLocally(batch, categoryMap, otherCategory, granularity, config);
+      assignLocally(batch, categoryMap, otherCategory, granularity);
       await sleep(40);
       continue;
     }
@@ -880,12 +872,12 @@ async function classifyNotes(notes, existingAlbumNames, options, onProgress = ()
     try {
       const prompt = buildPrompt(batch, categoryMap, index, batches.length, granularity, config);
       const payload = await callLlm(prompt, config);
-      if (!applyLlmAssignments(batch, payload, categoryMap, otherCategory, config)) {
-        assignLocally(batch, categoryMap, otherCategory, granularity, config);
+      if (!applyLlmAssignments(batch, payload, categoryMap, otherCategory)) {
+        assignLocally(batch, categoryMap, otherCategory, granularity);
       }
     } catch (error) {
       logger.warn("LLM \u5206\u6279\u5206\u7c7b\u5931\u8d25\uff0c\u4f7f\u7528\u672c\u5730\u515c\u5e95", { error: errorMessage(error), detail: errorDetail(error) });
-      assignLocally(batch, categoryMap, otherCategory, granularity, config);
+      assignLocally(batch, categoryMap, otherCategory, granularity);
     }
     await sleep(80);
   }
@@ -900,7 +892,7 @@ async function classifyNotes(notes, existingAlbumNames, options, onProgress = ()
     analyzedTitleCount: selected.length,
     totalTitleCount: notes.length,
     titleSelectionLimit: config.maxTitlesForPrompt,
-    categoryLimit: config.maxCategories,
+    categoryLimit: null,
     batchSize,
     existingAlbumCount: existingAlbumNames.length,
     granularity
@@ -931,7 +923,7 @@ function buildManualReviewPayload({ notes, existingAlbums, config, granularity }
       granularity === "fine"
         ? "\u7ec6\u7c92\u5ea6\uff1a\u53ef\u4ee5\u6309\u56fd\u5bb6\u3001\u57ce\u5e02\u3001\u5730\u533a\u3001\u8def\u7ebf\u6216\u660e\u786e\u4e3b\u9898\u62c6\u5206\uff0c\u4f8b\u5982\u65e5\u672c\u65c5\u884c\u3001\u65b0\u7586\u8def\u7ebf\u3002"
         : "\u7c97\u7c92\u5ea6\uff1a\u4f18\u5148\u5408\u5e76\u4e3a\u901a\u7528\u4e3b\u9898\uff0c\u4f8b\u5982\u65e5\u672c\u65c5\u884c\u3001\u6cf0\u56fd\u65c5\u884c\u3001\u65b0\u7586\u65c5\u884c\u5c3d\u91cf\u5408\u5e76\u4e3a\u65c5\u884c\u3002",
-      `\u5e38\u89c4\u5206\u7c7b\u4e0a\u9650\u4e3a ${config.maxCategories} \u4e2a\uff1b\u65e0\u6cd5\u53ef\u9760\u5f52\u7c7b\u7684\u653e\u5165\u201c\u5176\u4ed6\u201d\u3002`,
+      "\u5206\u7c7b\u6570\u91cf\u4e0d\u8bbe\u4e0a\u9650\uff1b\u65e0\u6cd5\u53ef\u9760\u5f52\u7c7b\u7684\u653e\u5165\u201c\u5176\u4ed6\u201d\u3002",
       "\u4f18\u5148\u590d\u7528 existingAlbums \u4e2d\u5df2\u6709\u4e13\u8f91\u540d\u3002",
       "\u6bcf\u4e2a\u5e8f\u53f7\u5fc5\u987b\u4e14\u53ea\u80fd\u5f52\u5165\u4e00\u4e2a\u5206\u7c7b\u3002"
     ],
@@ -942,7 +934,7 @@ function buildManualReviewPayload({ notes, existingAlbums, config, granularity }
       ]
     },
     limits: {
-      maxCategories: config.maxCategories,
+      maxCategories: null,
       maxTitlesForPrompt: config.maxTitlesForPrompt,
       selectedTitleCount: selected.length,
       totalTitleCount: (notes || []).length
@@ -963,7 +955,7 @@ function buildManualReviewPrompt(payload) {
   return [
     "\u8bf7\u5e2e\u6211\u7ed9\u5c0f\u7ea2\u4e66\u6536\u85cf\u7b14\u8bb0\u505a\u4e13\u8f91\u5206\u7c7b\u3002",
     `\u5206\u7c7b\u7c92\u5ea6\uff1a${payload.granularity === "fine" ? "\u7ec6\u7c92\u5ea6" : "\u7c97\u7c92\u5ea6"}`,
-    `\u5e38\u89c4\u5206\u7c7b\u4e0a\u9650\uff1a${payload.limits.maxCategories}`,
+    "\u5206\u7c7b\u6570\u91cf\u4e0d\u8bbe\u4e0a\u9650\u3002",
     `\u5df2\u6709\u4e13\u8f91\uff0c\u4f18\u5148\u590d\u7528\uff1a${existing}`,
     "\u8981\u6c42\uff1a\u6bcf\u4e2a\u5e8f\u53f7\u5fc5\u987b\u4e14\u53ea\u80fd\u5f52\u5165\u4e00\u4e2a\u5206\u7c7b\uff1b\u65e0\u6cd5\u53ef\u9760\u5f52\u7c7b\u653e\u5165\u201c\u5176\u4ed6\u201d\uff1b\u53ea\u8fd4\u56de JSON\uff0c\u4e0d\u8981\u89e3\u91ca\u3002",
     'JSON \u683c\u5f0f\uff1a{"items":[{"i":1,"name":"\u65c5\u884c"},{"i":2,"name":"\u7f8e\u98df"}]}',
@@ -998,10 +990,7 @@ function manualAssignmentsToPlan(input, notes, existingAlbums, config, granulari
     if (!isOtherName(name)) {
       const key = categoryKey(name) || compactTitle(name);
       if (!categories.has(key)) {
-        const regularCount = Array.from(categories.values()).filter(isRegularCategory).length;
-        if (regularCount < config.maxCategories || existingNames.has(name)) {
-          categories.set(key, { name, title: name, intro: "", count: 0, titles: [], isExisting: existingNames.has(name) });
-        }
+        categories.set(key, { name, title: name, intro: "", count: 0, titles: [], isExisting: existingNames.has(name) });
       }
       category = categories.get(key) || other;
     }
@@ -1028,7 +1017,7 @@ function manualAssignmentsToPlan(input, notes, existingAlbums, config, granulari
     analyzedTitleCount: selected.length,
     totalTitleCount: (notes || []).length,
     titleSelectionLimit: config.maxTitlesForPrompt,
-    categoryLimit: config.maxCategories,
+    categoryLimit: null,
     batchSize: selected.length,
     existingAlbumCount: (existingAlbums || []).length,
     granularity,
@@ -1263,8 +1252,7 @@ function ensureControls(onRun) {
     host = document.createElement("div");
     host.id = HOST_ID;
     host.innerHTML = `
-      <div class="tabbit-xhs-controls" role="group" aria-label="\u6570\u91cf\u4e0a\u9650">
-        <label class="tabbit-xhs-select"><span>\u5206\u7c7b</span><select data-limit-key="maxCategories" aria-label="\u5206\u7c7b\u6570\u91cf\u4e0a\u9650">${optionsHtml([5, 10, 15, 20, 30, 50], state.config.maxCategories)}</select></label>
+      <div class="tabbit-xhs-controls" role="group" aria-label="\u6807\u9898\u6570\u91cf">
         <label class="tabbit-xhs-select"><span>\u6807\u9898</span><select data-limit-key="maxTitlesForPrompt" aria-label="\u6807\u9898\u9009\u62e9\u6570\u91cf\u4e0a\u9650">${optionsHtml([100, 200, 300, 500, 1000, 2000, 5000], state.config.maxTitlesForPrompt)}</select></label>
       </div>
       <div class="tabbit-xhs-granularity" role="group" aria-label="\u5206\u7c7b\u7c92\u5ea6">
@@ -1295,7 +1283,6 @@ function ensureControls(onRun) {
 
   if (host.parentElement !== tabBar) tabBar.appendChild(host);
   host.style.display = isFavNotePage() ? "flex" : "none";
-  host.querySelector('select[data-limit-key="maxCategories"]').value = String(state.config.maxCategories);
   host.querySelector('select[data-limit-key="maxTitlesForPrompt"]').value = String(state.config.maxTitlesForPrompt);
   updateGranularityButtons(host);
   tabBar.setAttribute(READY_ATTR, "true");
@@ -1378,14 +1365,14 @@ function showPlanDialog(notes, plan, callbacks) {
   const granularityName = plan.granularity === "fine" ? "\u7ec6\u7c92\u5ea6" : "\u7c97\u7c92\u5ea6";
   const subtitle =
     `${granularityName}\uff1a\u5df2\u9009\u62e9 ${analyzed}/${total} \u4e2a\u6807\u9898\u53c2\u4e0e\u5206\u7c7b\uff0c\u6309\u6bcf\u6279 ${batchSize} \u4e2a\u589e\u91cf\u5206\u6790\u3002` +
-    ` \u5c06\u521b\u5efa ${regularCount} \u4e2a\u5e38\u89c4\u5206\u7c7b\u4e13\u8f91${other ? `\uff0c\u53e6\u6709\u201c\u5176\u4ed6\u201d${Number(other.count) || (other.titles || []).length || 0} \u7bc7\u4e0d\u8ba1\u5165\u4e0a\u9650` : ""}\uff0c\u9ed8\u8ba4\u79c1\u6709\u3002`;
+    ` \u5c06\u521b\u5efa ${regularCount} \u4e2a\u5e38\u89c4\u5206\u7c7b\u4e13\u8f91${other ? `\uff0c\u53e6\u6709\u201c\u5176\u4ed6\u201d${Number(other.count) || (other.titles || []).length || 0} \u7bc7\u5f85\u5206\u7c7b` : ""}\uff0c\u9ed8\u8ba4\u79c1\u6709\u3002`;
 
   const body = `
     <div class="tabbit-xhs-summary">
       <div class="tabbit-xhs-stat"><span>\u91c7\u96c6</span><b>${total}</b></div>
       <div class="tabbit-xhs-stat"><span>\u5206\u6790</span><b>${analyzed}</b></div>
       <div class="tabbit-xhs-stat"><span>\u5df2\u6709\u4e13\u8f91</span><b>${Number(plan.existingAlbumCount) || 0}</b></div>
-      <div class="tabbit-xhs-stat"><span>\u5206\u7c7b\u4e0a\u9650</span><b>${state.config.maxCategories}</b></div>
+      <div class="tabbit-xhs-stat"><span>\u672c\u6b21\u5206\u7c7b</span><b>${regularCount}</b></div>
     </div>
     <ul class="tabbit-xhs-list">
       ${categories.map((category) => `
@@ -1484,12 +1471,12 @@ function isLoginError(error) {
 }
 
 function assertApiSuccess(value, label) {
-  if (!value || typeof value !== "object") return value;
+  if (!value || typeof value !== "object") throw new Error(`${label} \u672a\u8fd4\u56de\u53ef\u786e\u8ba4\u7684\u7ed3\u679c`);
   const code = value.code ?? value.data?.code;
   const success = value.success ?? value.data?.success;
   const message = value.msg || value.message || value.data?.msg || value.data?.message || "";
-  if (code === 0 || success === true || (code == null && success == null)) return value;
-  throw new Error(`${label} \u8fd4\u56de\u5931\u8d25${code != null ? ` code=${code}` : ""}${message ? `\uff1a${message}` : ""}`);
+  if (code === 0 || success === true) return value;
+  throw new Error(`${label} \u8fd4\u56de\u5931\u8d25\uff08\u8fd4\u56de\u7ed3\u6784\uff1a${Object.keys(value).join(",")}\uff1bdata\uff1a${value.data && typeof value.data === "object" ? Object.keys(value.data).join(",") : typeof value.data}\uff09${code != null ? ` code=${code}` : ""}${message ? `\uff1a${message}` : ""}`);
 }
 
 function getWebpackRequire() {
@@ -1537,17 +1524,23 @@ function discoverFromExports(exportsValue, found, seen) {
       found.boardUser = candidate;
       found.boardUserSource = key;
     }
-    if (found.move && found.collect && found.boardUser) break;
+    if (!found.boardNotes && /board\/note/.test(source)) found.boardNotes = candidate;
+    if (found.move && found.collect && found.boardUser && found.boardNotes) break;
   }
+}
+
+function endpointFunction(fn, pattern) {
+  return typeof fn === "function" && pattern.test(Function.prototype.toString.call(fn)) ? fn : null;
 }
 
 function discoverApi(requireFn) {
   const module25717 = requireModule(requireFn, 25717);
   const found = {
     raw: module25717 || null,
-    move: module25717?.d0 || null,
-    collect: module25717?.B1 || null,
-    boardUser: module25717?.yC || null,
+    move: endpointFunction(module25717?.d0, /note\/move/),
+    collect: endpointFunction(module25717?.B1, /note\/collect/),
+    boardUser: endpointFunction(module25717?.yC, /board\/user/),
+    boardNotes: endpointFunction(module25717?.Ks, /board\/note/),
     moveSource: module25717?.d0 ? "module25717.d0" : "",
     collectSource: module25717?.B1 ? "module25717.B1" : "",
     boardUserSource: module25717?.yC ? "module25717.yC" : ""
@@ -1562,8 +1555,11 @@ function discoverApi(requireFn) {
 
   if (!found.move && requireFn?.m) {
     for (const id of Object.keys(requireFn.m)) {
+      const source = Function.prototype.toString.call(requireFn.m[id]);
+      if (!/note\/move|note\/collect|board\/user|board\/note/.test(source)) continue;
       discoverFromExports(requireModule(requireFn, id), found, seen);
-      if (found.move && found.collect && found.boardUser) break;
+      if (!found.boardNotes && /board\/note/.test(source)) found.boardNotes = candidate;
+    if (found.move && found.collect && found.boardUser && found.boardNotes) break;
     }
   }
 
@@ -1664,10 +1660,11 @@ function extractProfileUserId() {
   return state.profileUserId;
 }
 
-function collectBoardItems(value, output = []) {
-  if (!value || output.length > 300) return output;
+function collectBoardItems(value, output = [], seen = new WeakSet()) {
+  if (!value || typeof value !== "object" || seen.has(value)) return output;
+  seen.add(value);
   if (Array.isArray(value)) {
-    value.forEach((item) => collectBoardItems(item, output));
+    value.forEach((item) => collectBoardItems(item, output, seen));
     return output;
   }
   if (typeof value !== "object") return output;
@@ -1676,7 +1673,7 @@ function collectBoardItems(value, output = []) {
   const name = normalizeText(value.name || value.title || value.boardName || value.board_name);
   if (id && name) output.push({ id, name });
   Object.keys(value).forEach((key) => {
-    if (/board|list|data|items/i.test(key)) collectBoardItems(value[key], output);
+    if (/board|list|data|items/i.test(key)) collectBoardItems(value[key], output, seen);
   });
   return output;
 }
@@ -1694,7 +1691,7 @@ async function boardUserFallback(config) {
     return [];
   }
 
-  const result = await retry(() => api.boardUser({ user_id: userId }), "\u67e5\u8be2\u4e13\u8f91\u5217\u8868", config, 1);
+  const result = await retry(() => api.boardUser({ user_id: userId, extractData: false }), "\u67e5\u8be2\u4e13\u8f91\u5217\u8868", config, 1);
   assertApiSuccess(result, "\u67e5\u8be2\u4e13\u8f91\u5217\u8868");
   const boards = collectBoardItems(result);
   logger.debug("board/user \u4e13\u8f91\u89e3\u6790\u5b8c\u6210", { count: boards.length, names: boards.slice(0, 20).map((item) => item.name) });
@@ -1773,6 +1770,29 @@ function buildAssignments(plan, collectedNotes) {
   return assignments;
 }
 
+async function readAssignmentSources(assignments, boardIdMap, api, config) {
+  if (!api.boardNotes) throw new Error("\u6ca1\u6709\u627e\u5230\u4e13\u8f91\u7b14\u8bb0\u63a5\u53e3\uff0c\u65e0\u6cd5\u786e\u8ba4\u6536\u85cf\u539f\u4e13\u8f91");
+  const sources = new Map();
+  for (const boardId of new Set(boardIdMap.values())) {
+    let cursor = "";
+    const seen = new Set();
+    for (let page = 0; page < 100; page += 1) {
+      const data = await retry(() => api.boardNotes({ params: { boardId, num: 30, cursor, imageFormats: "webp" } }), "\u8bfb\u53d6\u6536\u85cf\u539f\u4e13\u8f91", config, 1);
+      if (!Array.isArray(data?.notes)) throw new Error("\u4e13\u8f91\u7b14\u8bb0\u5217\u8868\u683c\u5f0f\u5f02\u5e38\uff0c\u505c\u6b62\u79fb\u52a8");
+      for (const note of data.notes) {
+        const id = normalizeText(note.noteId || note.id);
+        if (id && !sources.has(id)) sources.set(id, boardId);
+      }
+      if (!data.hasMore) break;
+      if (!data.cursor || seen.has(data.cursor) || page === 99) throw new Error("\u4e13\u8f91\u7ffb\u9875\u5f02\u5e38\uff0c\u505c\u6b62\u79fb\u52a8");
+      seen.add(data.cursor);
+      cursor = data.cursor;
+      if (config.apiAddDelay) await sleep(config.apiAddDelay);
+    }
+  }
+  return assignments.map((assignment) => ({ ...assignment, sourceBoardId: assignment.sourceBoardId ?? sources.get(assignment.noteId) ?? "" }));
+}
+
 async function moveOne(assignment, boardIdMap, config) {
   if (!assignment.noteId) throw new Error("\u6ca1\u6709\u4ece\u7b14\u8bb0\u94fe\u63a5\u4e2d\u89e3\u6790\u5230 noteId");
   if (!assignment.isCollected) throw new Error("\u8df3\u8fc7\u975e\u6536\u85cf\u6765\u6e90\u7b14\u8bb0\uff0c\u907f\u514d\u79fb\u52a8\u81ea\u5df1\u53d1\u5e03\u7684\u7b14\u8bb0");
@@ -1785,12 +1805,12 @@ async function moveOne(assignment, boardIdMap, config) {
 
   if (config.apiEnsureCollectBeforeMove) {
     if (!api.collect) throw new Error("\u6ca1\u6709\u627e\u5230 note/collect \u5185\u90e8 API\uff0c\u65e0\u6cd5\u6267\u884c\u9884\u6536\u85cf\u786e\u8ba4");
-    await retry(() => api.collect({ note_id: assignment.noteId }), `\u6536\u85cf\u7b14\u8bb0 ${assignment.noteId}`, config, 1)
+    await retry(() => api.collect({ note_id: assignment.noteId }, { extractData: false }), `\u6536\u85cf\u7b14\u8bb0 ${assignment.noteId}`, config, 1)
       .then((result) => assertApiSuccess(result, `\u6536\u85cf\u7b14\u8bb0 ${assignment.noteId}`));
   }
 
-  const body = { target_board_id: targetBoardId, notes_id: assignment.noteId };
-  const result = await retry(() => api.move(body), `\u79fb\u52a8\u7b14\u8bb0 ${assignment.noteId} \u5230\u4e13\u8f91`, config);
+  const body = { source_board_id: normalizeText(assignment.sourceBoardId || ""), target_board_id: targetBoardId, notes_id: assignment.noteId };
+  const result = await retry(() => api.move(body, { extractData: false }), `\u79fb\u52a8\u7b14\u8bb0 ${assignment.noteId} \u5230\u4e13\u8f91`, config);
   assertApiSuccess(result, `\u79fb\u52a8\u7b14\u8bb0 ${assignment.noteId} \u5230\u4e13\u8f91`);
   return result;
 }
@@ -1799,6 +1819,8 @@ async function moveAssignments(assignments, boardIdMap, config, onProgress = () 
   await checkLogin(config);
   getApiModule();
 
+  onProgress(10, "\u6b63\u5728\u6838\u5bf9\u6536\u85cf\u6240\u5728\u7684\u539f\u4e13\u8f91");
+  assignments = await readAssignmentSources(assignments, boardIdMap, getApiModule(), config);
   const result = { added: [], failed: [] };
   for (let index = 0; index < assignments.length; index += 1) {
     const assignment = assignments[index];
@@ -1826,9 +1848,9 @@ function installMoveProbe() {
       throw new Error("\u9700\u8981\u4f20\u5165 noteId \u548c targetBoardId\uff0c\u4f8b\u5982 window.__tabbitXhsApiMoveProbe({ noteId, targetBoardId })");
     }
     const api = getApiModule();
-    const body = { target_board_id: targetBoardId, notes_id: noteId };
+    const body = { source_board_id: normalizeText(input.sourceBoardId || input.source_board_id || ""), target_board_id: targetBoardId, notes_id: noteId };
     logger.debug("manual move probe start", { body, moveSource: api.moveSource });
-    const response = await api.move(body);
+    const response = await api.move(body, { extractData: false });
     assertApiSuccess(response, `\u624b\u52a8\u63a2\u9488\u79fb\u52a8\u7b14\u8bb0 ${noteId} \u5230\u4e13\u8f91`);
     logger.debug("manual move probe success", summarizeResponse(response));
     return response;

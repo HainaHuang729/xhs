@@ -25,14 +25,9 @@ function usedRegularCount(categoryMap) {
   return Array.from(categoryMap.values()).filter((category) => isRegularCategory(category) && (category.titles?.length || !category.isExisting)).length;
 }
 
-function canAddCategory(categoryMap, config) {
-  return usedRegularCount(categoryMap) < config.maxCategories;
-}
-
-function createExistingCategoryMap(existingAlbumNames, config) {
+function createExistingCategoryMap(existingAlbumNames) {
   const map = new Map();
   for (const rawName of existingAlbumNames || []) {
-    if (map.size >= Math.min(config.maxCategories, config.maxClassificationContextCategories)) break;
     const name = cleanCategoryName(rawName, map.size);
     if (!name || isOtherName(name)) continue;
     const key = categoryKey(name);
@@ -68,7 +63,7 @@ function localCategoryForTitle(title, granularity) {
   return rules.find(([, keys]) => keys.some((key) => text.includes(key)))?.[0] || OTHER_CATEGORY_NAME;
 }
 
-function assignLocally(batch, categoryMap, otherCategory, granularity, config) {
+function assignLocally(batch, categoryMap, otherCategory, granularity) {
   for (const note of batch) {
     const title = normalizeText(note.title);
     if (!title) continue;
@@ -78,7 +73,7 @@ function assignLocally(batch, categoryMap, otherCategory, granularity, config) {
       const localName = localCategoryForTitle(title, granularity);
       if (!isOtherName(localName)) {
         const key = categoryKey(localName);
-        if (!categoryMap.has(key) && canAddCategory(categoryMap, config)) {
+        if (!categoryMap.has(key)) {
           categoryMap.set(key, { name: localName, title: localName, intro: "", count: 0, titles: [], isExisting: false });
         }
         category = categoryMap.get(key);
@@ -128,7 +123,7 @@ function buildPrompt(batch, categoryMap, batchIndex, batchCount, granularity, co
   const context = [
     ...categories.filter((category) => category.titles?.length || !category.isExisting),
     ...categories.filter((category) => category.isExisting && !category.titles?.length)
-  ].slice(0, Math.min(config.maxCategories, config.maxClassificationContextCategories));
+  ].slice(0, config.maxClassificationContextCategories);
 
   const contextText = context.length
     ? context.map((category, index) => {
@@ -137,24 +132,21 @@ function buildPrompt(batch, categoryMap, batchIndex, batchCount, granularity, co
       }).join("\n")
     : "暂无已有分类。";
 
-  const remaining = Math.max(0, config.maxCategories - usedRegularCount(categoryMap));
   const granularityInstruction =
     granularity === "fine"
       ? "当前为细粒度：允许按国家、城市、地区、路线、内容主题继续拆分。例如“日本旅行”和“泰国旅行”可以分别归为“日本旅行”“泰国旅行”；但仍要避免为单篇标题单独建类。"
       : "当前为粗粒度：优先合并为更大的通用主题，不按国家、城市或路线过度拆分。例如“日本旅行”“泰国旅行”“新疆旅行”应优先合并为“旅行”；只有主题明显不同才拆分。";
   const addInstruction =
-    remaining > 0
-      ? granularity === "fine"
-        ? "只有当标题无法自然归入现有分类时，才可以新增更具体分类；新增分类名可以按国家、城市、地区、路线或明确主题拆分，但不要为单篇标题单独建类。"
-        : "只有当标题无法自然归入现有分类时，才可以新增宽泛分类；新增分类名要适合作为专辑标题，简短自然，不要太细。"
-      : "常规分类已达到上限，禁止新增常规分类；无法归入现有分类的标题必须放入“其他”。";
+    granularity === "fine"
+      ? "只有当标题无法自然归入现有分类时，才可以新增更具体分类；新增分类名可以按国家、城市、地区、路线或明确主题拆分，但不要为单篇标题单独建类。"
+      : "只有当标题无法自然归入现有分类时，才可以新增宽泛分类；新增分类名要适合作为专辑标题，简短自然，不要太细。";
   const titles = batch.map((note, index) => `${index + 1}. ${note.title}`).join("\n");
 
   return [
     "你是小红书收藏整理助手。现在按批次整理用户收藏笔记标题，并维护一组稳定的小红书专辑分类。",
     `这是第 ${batchIndex + 1}/${batchCount} 批，每批最多 ${config.classificationBatchSize} 个标题。${granularityInstruction}`,
-    `当前已有/已新增的常规分类如下。请优先复用这些分类，不要因为表达略有差异就新增分类：\n${contextText}`,
-    `常规分类总上限为 ${config.maxCategories} 个，当前已有 ${usedRegularCount(categoryMap)} 个已使用分类，还可以新增 ${remaining} 个。`,
+    `以下为当前分类的参考样本。请优先复用已有分类，不要因为表达略有差异就新增分类：\n${contextText}`,
+    `分类数量不设上限，当前已有 ${usedRegularCount(categoryMap)} 个已使用分类；仅无法可靠归类的标题放入“其他”。`,
     addInstruction,
     "只做本批标题到分类名的映射，不要解释，不要复述标题全文。每个序号必须且只能归入一个分类。无法可靠归入常规分类的序号放入“其他”。",
     '只返回 JSON，结构：{"items":[{"i":1,"name":"已有或新增专辑标题"}]}。i 是标题序号，name 是分类名。',
@@ -163,7 +155,7 @@ function buildPrompt(batch, categoryMap, batchIndex, batchCount, granularity, co
   ].join("\n");
 }
 
-function applyLlmAssignments(batch, payload, categoryMap, otherCategory, config) {
+function applyLlmAssignments(batch, payload, categoryMap, otherCategory) {
   const assignments = Array.isArray(payload.items) ? payload.items : Array.isArray(payload.assignments) ? payload.assignments : [];
   if (!assignments.length) return false;
 
@@ -178,7 +170,7 @@ function applyLlmAssignments(batch, payload, categoryMap, otherCategory, config)
     const name = cleanCategoryName(rawName, categoryMap.size);
     if (!isOtherName(name)) {
       const key = categoryKey(name);
-      if (!categoryMap.has(key) && canAddCategory(categoryMap, config)) {
+      if (!categoryMap.has(key)) {
         categoryMap.set(key, { name, title: name, intro: "", count: 0, titles: [], isExisting: false });
       }
       category = categoryMap.get(key) || otherCategory;
@@ -202,7 +194,7 @@ export async function classifyNotes(notes, existingAlbumNames, options, onProgre
   const batches = [];
   for (let index = 0; index < selected.length; index += batchSize) batches.push(selected.slice(index, index + batchSize));
 
-  const categoryMap = createExistingCategoryMap(existingAlbumNames, config);
+  const categoryMap = createExistingCategoryMap(existingAlbumNames);
   const otherCategory = { name: OTHER_CATEGORY_NAME, title: OTHER_CATEGORY_NAME, intro: "未能可靠归入上述分类的收藏笔记，作为备注保留。", count: 0, titles: [], isOther: true };
   state.assignmentCache = new Map();
 
@@ -211,7 +203,7 @@ export async function classifyNotes(notes, existingAlbumNames, options, onProgre
 
     const batch = batches[index];
     if (!window.LLMBridge || typeof window.LLMBridge.chat !== "function") {
-      assignLocally(batch, categoryMap, otherCategory, granularity, config);
+      assignLocally(batch, categoryMap, otherCategory, granularity);
       await sleep(40);
       continue;
     }
@@ -219,12 +211,12 @@ export async function classifyNotes(notes, existingAlbumNames, options, onProgre
     try {
       const prompt = buildPrompt(batch, categoryMap, index, batches.length, granularity, config);
       const payload = await callLlm(prompt, config);
-      if (!applyLlmAssignments(batch, payload, categoryMap, otherCategory, config)) {
-        assignLocally(batch, categoryMap, otherCategory, granularity, config);
+      if (!applyLlmAssignments(batch, payload, categoryMap, otherCategory)) {
+        assignLocally(batch, categoryMap, otherCategory, granularity);
       }
     } catch (error) {
       logger.warn("LLM 分批分类失败，使用本地兜底", { error: errorMessage(error), detail: errorDetail(error) });
-      assignLocally(batch, categoryMap, otherCategory, granularity, config);
+      assignLocally(batch, categoryMap, otherCategory, granularity);
     }
     await sleep(80);
   }
@@ -239,7 +231,7 @@ export async function classifyNotes(notes, existingAlbumNames, options, onProgre
     analyzedTitleCount: selected.length,
     totalTitleCount: notes.length,
     titleSelectionLimit: config.maxTitlesForPrompt,
-    categoryLimit: config.maxCategories,
+    categoryLimit: null,
     batchSize,
     existingAlbumCount: existingAlbumNames.length,
     granularity

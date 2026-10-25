@@ -5,6 +5,11 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build-console.mjs",
-    "check": "node --check src/config.js && node --check src/state.js && node --check src/logger.js && node --check src/dom.js && node --check src/categoryNames.js && node --check src/scanner.js && node --check src/albums.js && node --check src/classifier.js && node --check src/manualReview.js && node --check src/ui.js && node --check src/xhsApi.js && node --check src/index.js && node --check dist/xhs-album-builder.console.js && node --check extension/content.js && node --check extension/xhs-album-builder.page.js"
+    "check": "node --check src/config.js && node --check src/state.js && node --check src/logger.js && node --check src/dom.js && node --check src/categoryNames.js && node --check src/scanner.js && node --check src/albums.js && node --check src/classifier.js && node --check src/manualReview.js && node --check src/ui.js && node --check src/xhsApi.js && node --check src/index.js && node --check dist/xhs-album-builder.console.js && node --check extension/content.js && node --check extension/xhs-album-builder.page.js",
+    "start": "python3 tools/serve_map.py",
+    "check:map": "node scripts/check-map.mjs",
+    "check:discover": "node scripts/check-discovery.mjs && node scripts/check-discovery-motion.mjs",
+    "check:food": "node scripts/check-food-categories.mjs",
+    "start:lan": "python3 tools/serve_map.py --lan"
   }
 }

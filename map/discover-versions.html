@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f4f7f6"><title>简约三版 · 收藏去处</title><link rel="stylesheet" href="discover-versions.css"></head>
+<body>
+ <header><a href="discover.html" id="backToDiscovery">⌖ 收藏去处</a><span>本地预览</span></header>
+ <main>
+  <div class="compare-intro"><h1>三种简约的打开方式</h1><p>切换样式，试试筛选和帖子。</p></div>
+  <div id="layoutChoices" class="layout-choices" role="group" aria-label="选择简约版本">
+   <button data-look="list" aria-pressed="false"><span class="mini mini-list" aria-hidden="true"><span><img data-sample="0" alt=""><i></i><i></i></span><span><img data-sample="1" alt=""><i></i><i></i></span></span><strong>清爽清单</strong><small>一眼看几个去处</small></button>
+   <button data-look="focus" aria-pressed="true"><span class="mini mini-focus" aria-hidden="true"><img data-sample="0" alt=""><span><i></i><i></i><b></b></span></span><strong>单卡漫游</strong><small>一次专注看一篇</small></button>
+   <button data-look="gallery" aria-pressed="false"><span class="mini mini-gallery" aria-hidden="true"><img data-sample="0" alt=""><img data-sample="1" alt=""><img data-sample="2" alt=""></span><strong>轻量画册</strong><small>用照片找灵感</small></button>
+  </div>
+  <section class="preview-section" aria-labelledby="previewTitle"><div class="preview-tools"><div><h2 id="previewTitle">单卡漫游</h2><span id="previewDescription">一次只看一篇，左右切换慢慢选。</span></div><div class="preview-actions"><div class="device-switch" role="group" aria-label="预览屏幕"><button data-device="phone" aria-pressed="true">手机</button><button data-device="desktop" aria-pressed="false">电脑</button></div><a id="openLayout" href="discover.html?look=focus" target="_blank" rel="noreferrer">打开这一版 ↗</a></div></div><div id="previewOuter"><div id="previewStage"><iframe id="livePreview" title="单卡漫游交互预览"></iframe></div></div></section>
+ </main>
+ <script type="module" src="discover-versions.js"></script>
+</body></html>

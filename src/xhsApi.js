@@ -19,12 +19,12 @@ export function isLoginError(error) {
 }
 
 function assertApiSuccess(value, label) {
-  if (!value || typeof value !== "object") return value;
+  if (!value || typeof value !== "object") throw new Error(`${label} 未返回可确认的结果`);
   const code = value.code ?? value.data?.code;
   const success = value.success ?? value.data?.success;
   const message = value.msg || value.message || value.data?.msg || value.data?.message || "";
-  if (code === 0 || success === true || (code == null && success == null)) return value;
-  throw new Error(`${label} 返回失败${code != null ? ` code=${code}` : ""}${message ? `：${message}` : ""}`);
+  if (code === 0 || success === true) return value;
+  throw new Error(`${label} 返回失败（返回结构：${Object.keys(value).join(",")}；data：${value.data && typeof value.data === "object" ? Object.keys(value.data).join(",") : typeof value.data}）${code != null ? ` code=${code}` : ""}${message ? `：${message}` : ""}`);
 }
 
 function getWebpackRequire() {
@@ -72,17 +72,23 @@ function discoverFromExports(exportsValue, found, seen) {
       found.boardUser = candidate;
       found.boardUserSource = key;
     }
-    if (found.move && found.collect && found.boardUser) break;
+    if (!found.boardNotes && /board\/note/.test(source)) found.boardNotes = candidate;
+    if (found.move && found.collect && found.boardUser && found.boardNotes) break;
   }
+}
+
+function endpointFunction(fn, pattern) {
+  return typeof fn === "function" && pattern.test(Function.prototype.toString.call(fn)) ? fn : null;
 }
 
 function discoverApi(requireFn) {
   const module25717 = requireModule(requireFn, 25717);
   const found = {
     raw: module25717 || null,
-    move: module25717?.d0 || null,
-    collect: module25717?.B1 || null,
-    boardUser: module25717?.yC || null,
+    move: endpointFunction(module25717?.d0, /note\/move/),
+    collect: endpointFunction(module25717?.B1, /note\/collect/),
+    boardUser: endpointFunction(module25717?.yC, /board\/user/),
+    boardNotes: endpointFunction(module25717?.Ks, /board\/note/),
     moveSource: module25717?.d0 ? "module25717.d0" : "",
     collectSource: module25717?.B1 ? "module25717.B1" : "",
     boardUserSource: module25717?.yC ? "module25717.yC" : ""
@@ -97,8 +103,11 @@ function discoverApi(requireFn) {
 
   if (!found.move && requireFn?.m) {
     for (const id of Object.keys(requireFn.m)) {
+      const source = Function.prototype.toString.call(requireFn.m[id]);
+      if (!/note\/move|note\/collect|board\/user|board\/note/.test(source)) continue;
       discoverFromExports(requireModule(requireFn, id), found, seen);
-      if (found.move && found.collect && found.boardUser) break;
+      if (!found.boardNotes && /board\/note/.test(source)) found.boardNotes = candidate;
+    if (found.move && found.collect && found.boardUser && found.boardNotes) break;
     }
   }
 
@@ -199,10 +208,11 @@ function extractProfileUserId() {
   return state.profileUserId;
 }
 
-function collectBoardItems(value, output = []) {
-  if (!value || output.length > 300) return output;
+function collectBoardItems(value, output = [], seen = new WeakSet()) {
+  if (!value || typeof value !== "object" || seen.has(value)) return output;
+  seen.add(value);
   if (Array.isArray(value)) {
-    value.forEach((item) => collectBoardItems(item, output));
+    value.forEach((item) => collectBoardItems(item, output, seen));
     return output;
   }
   if (typeof value !== "object") return output;
@@ -211,7 +221,7 @@ function collectBoardItems(value, output = []) {
   const name = normalizeText(value.name || value.title || value.boardName || value.board_name);
   if (id && name) output.push({ id, name });
   Object.keys(value).forEach((key) => {
-    if (/board|list|data|items/i.test(key)) collectBoardItems(value[key], output);
+    if (/board|list|data|items/i.test(key)) collectBoardItems(value[key], output, seen);
   });
   return output;
 }
@@ -229,7 +239,7 @@ async function boardUserFallback(config) {
     return [];
   }
 
-  const result = await retry(() => api.boardUser({ user_id: userId }), "查询专辑列表", config, 1);
+  const result = await retry(() => api.boardUser({ user_id: userId, extractData: false }), "查询专辑列表", config, 1);
   assertApiSuccess(result, "查询专辑列表");
   const boards = collectBoardItems(result);
   logger.debug("board/user 专辑解析完成", { count: boards.length, names: boards.slice(0, 20).map((item) => item.name) });
@@ -308,6 +318,29 @@ export function buildAssignments(plan, collectedNotes) {
   return assignments;
 }
 
+export async function readAssignmentSources(assignments, boardIdMap, api, config) {
+  if (!api.boardNotes) throw new Error("没有找到专辑笔记接口，无法确认收藏原专辑");
+  const sources = new Map();
+  for (const boardId of new Set(boardIdMap.values())) {
+    let cursor = "";
+    const seen = new Set();
+    for (let page = 0; page < 100; page += 1) {
+      const data = await retry(() => api.boardNotes({ params: { boardId, num: 30, cursor, imageFormats: "webp" } }), "读取收藏原专辑", config, 1);
+      if (!Array.isArray(data?.notes)) throw new Error("专辑笔记列表格式异常，停止移动");
+      for (const note of data.notes) {
+        const id = normalizeText(note.noteId || note.id);
+        if (id && !sources.has(id)) sources.set(id, boardId);
+      }
+      if (!data.hasMore) break;
+      if (!data.cursor || seen.has(data.cursor) || page === 99) throw new Error("专辑翻页异常，停止移动");
+      seen.add(data.cursor);
+      cursor = data.cursor;
+      if (config.apiAddDelay) await sleep(config.apiAddDelay);
+    }
+  }
+  return assignments.map((assignment) => ({ ...assignment, sourceBoardId: assignment.sourceBoardId ?? sources.get(assignment.noteId) ?? "" }));
+}
+
 async function moveOne(assignment, boardIdMap, config) {
   if (!assignment.noteId) throw new Error("没有从笔记链接中解析到 noteId");
   if (!assignment.isCollected) throw new Error("跳过非收藏来源笔记，避免移动自己发布的笔记");
@@ -320,12 +353,12 @@ async function moveOne(assignment, boardIdMap, config) {
 
   if (config.apiEnsureCollectBeforeMove) {
     if (!api.collect) throw new Error("没有找到 note/collect 内部 API，无法执行预收藏确认");
-    await retry(() => api.collect({ note_id: assignment.noteId }), `收藏笔记 ${assignment.noteId}`, config, 1)
+    await retry(() => api.collect({ note_id: assignment.noteId }, { extractData: false }), `收藏笔记 ${assignment.noteId}`, config, 1)
       .then((result) => assertApiSuccess(result, `收藏笔记 ${assignment.noteId}`));
   }
 
-  const body = { target_board_id: targetBoardId, notes_id: assignment.noteId };
-  const result = await retry(() => api.move(body), `移动笔记 ${assignment.noteId} 到专辑`, config);
+  const body = { source_board_id: normalizeText(assignment.sourceBoardId || ""), target_board_id: targetBoardId, notes_id: assignment.noteId };
+  const result = await retry(() => api.move(body, { extractData: false }), `移动笔记 ${assignment.noteId} 到专辑`, config);
   assertApiSuccess(result, `移动笔记 ${assignment.noteId} 到专辑`);
   return result;
 }
@@ -334,6 +367,8 @@ export async function moveAssignments(assignments, boardIdMap, config, onProgres
   await checkLogin(config);
   getApiModule();
 
+  onProgress(10, "正在核对收藏所在的原专辑");
+  assignments = await readAssignmentSources(assignments, boardIdMap, getApiModule(), config);
   const result = { added: [], failed: [] };
   for (let index = 0; index < assignments.length; index += 1) {
     const assignment = assignments[index];
@@ -361,9 +396,9 @@ export function installMoveProbe() {
       throw new Error("需要传入 noteId 和 targetBoardId，例如 window.__tabbitXhsApiMoveProbe({ noteId, targetBoardId })");
     }
     const api = getApiModule();
-    const body = { target_board_id: targetBoardId, notes_id: noteId };
+    const body = { source_board_id: normalizeText(input.sourceBoardId || input.source_board_id || ""), target_board_id: targetBoardId, notes_id: noteId };
     logger.debug("manual move probe start", { body, moveSource: api.moveSource });
-    const response = await api.move(body);
+    const response = await api.move(body, { extractData: false });
     assertApiSuccess(response, `手动探针移动笔记 ${noteId} 到专辑`);
     logger.debug("manual move probe success", summarizeResponse(response));
     return response;

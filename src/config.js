@@ -7,7 +7,6 @@ export const DEFAULT_CONFIG = {
   scrollDelay: 720,
   stableRoundsToStop: 5,
   maxTitlesForPrompt: 500,
-  maxCategories: 20,
   classificationBatchSize: 100,
   maxClassificationContextCategories: 20,
   llmBatchTimeoutMs: 45_000,
@@ -23,7 +22,6 @@ const integerKeys = {
   maxScrollRounds: [1, 1000],
   stableRoundsToStop: [1, 20],
   maxTitlesForPrompt: [1, 20_000],
-  maxCategories: [1, 200],
   classificationBatchSize: [20, 500],
   maxClassificationContextCategories: [1, 200],
   llmBatchTimeoutMs: [5_000, 180_000],
@@ -40,6 +38,8 @@ export function getConfig() {
 
 export function normalizeConfig(input) {
   const config = { ...input };
+  // Ignore category caps left in configuration from older versions.
+  delete config.maxCategories;
   for (const [key, [min, max]] of Object.entries(integerKeys)) {
     const value = Math.floor(Number(config[key]));
     config[key] = Number.isFinite(value) ? Math.max(min, Math.min(max, value)) : DEFAULT_CONFIG[key];

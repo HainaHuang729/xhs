@@ -5,5 +5,12 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 outputs/
+output/
+map/data/favorites.json
+map/media/
+.env
+.env.*
+!.env.example
+.sites-runtime/
 __pycache__/
 *.pyc

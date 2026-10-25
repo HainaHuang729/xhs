@@ -228,8 +228,7 @@ export function ensureControls(onRun) {
     host = document.createElement("div");
     host.id = HOST_ID;
     host.innerHTML = `
-      <div class="tabbit-xhs-controls" role="group" aria-label="数量上限">
-        <label class="tabbit-xhs-select"><span>分类</span><select data-limit-key="maxCategories" aria-label="分类数量上限">${optionsHtml([5, 10, 15, 20, 30, 50], state.config.maxCategories)}</select></label>
+      <div class="tabbit-xhs-controls" role="group" aria-label="标题数量">
         <label class="tabbit-xhs-select"><span>标题</span><select data-limit-key="maxTitlesForPrompt" aria-label="标题选择数量上限">${optionsHtml([100, 200, 300, 500, 1000, 2000, 5000], state.config.maxTitlesForPrompt)}</select></label>
       </div>
       <div class="tabbit-xhs-granularity" role="group" aria-label="分类粒度">
@@ -260,7 +259,6 @@ export function ensureControls(onRun) {
 
   if (host.parentElement !== tabBar) tabBar.appendChild(host);
   host.style.display = isFavNotePage() ? "flex" : "none";
-  host.querySelector('select[data-limit-key="maxCategories"]').value = String(state.config.maxCategories);
   host.querySelector('select[data-limit-key="maxTitlesForPrompt"]').value = String(state.config.maxTitlesForPrompt);
   updateGranularityButtons(host);
   tabBar.setAttribute(READY_ATTR, "true");
@@ -343,14 +341,14 @@ export function showPlanDialog(notes, plan, callbacks) {
   const granularityName = plan.granularity === "fine" ? "细粒度" : "粗粒度";
   const subtitle =
     `${granularityName}：已选择 ${analyzed}/${total} 个标题参与分类，按每批 ${batchSize} 个增量分析。` +
-    ` 将创建 ${regularCount} 个常规分类专辑${other ? `，另有“其他”${Number(other.count) || (other.titles || []).length || 0} 篇不计入上限` : ""}，默认私有。`;
+    ` 将创建 ${regularCount} 个常规分类专辑${other ? `，另有“其他”${Number(other.count) || (other.titles || []).length || 0} 篇待分类` : ""}，默认私有。`;
 
   const body = `
     <div class="tabbit-xhs-summary">
       <div class="tabbit-xhs-stat"><span>采集</span><b>${total}</b></div>
       <div class="tabbit-xhs-stat"><span>分析</span><b>${analyzed}</b></div>
       <div class="tabbit-xhs-stat"><span>已有专辑</span><b>${Number(plan.existingAlbumCount) || 0}</b></div>
-      <div class="tabbit-xhs-stat"><span>分类上限</span><b>${state.config.maxCategories}</b></div>
+      <div class="tabbit-xhs-stat"><span>本次分类</span><b>${regularCount}</b></div>
     </div>
     <ul class="tabbit-xhs-list">
       ${categories.map((category) => `

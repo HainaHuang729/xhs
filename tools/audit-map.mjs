@@ -1,0 +1,17 @@
+import fs from 'node:fs';
+import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+import {normalize,regionMatches,pointsForRegion} from '../map/model.js';
+import {foodGroups,foodTaxonomyVersion} from '../map/food-categories.js';
+const root=path.resolve(path.dirname(fileURLToPath(import.meta.url)),'..');
+const file=path.join(root,'outputs/map-data.json');const sourceData=JSON.parse(fs.readFileSync(file));
+// Audit the normalized display view without overwriting historical source fields.
+const data={...sourceData,rows:normalize(sourceData)};const h=data.rows.filter(n=>regionMatches(n,'hksz'));
+for(const n of data.rows){const m=n.detail_diagnostic?.body_excerpt?.match(/(?:^|\n)1\/(\d+)(?:\n|$)/);if(m)n.photo_total_expected=Math.max(n.photo_total_expected||0,Number(m[1]));n.photo_total=Math.max(n.photo_total_expected||0,n.remote_images?.length||0,n.images?.length||0);if(n.locations?.length&&n.location_review_status==='located')n.candidate_locations=[];}
+const c=data.coverage;Object.assign(c,{hksz_total:h.length,hksz_read_success:h.filter(n=>n.photo_checked_at&&!n.photo_error||n.content).length,hksz_loaded:h.filter(n=>n.content).length,hksz_attempted:h.filter(n=>n.detail_checked_at).length,hksz_remaining:h.filter(n=>!n.photo_checked_at&&!n.content).length,hksz_empty_body:h.filter(n=>n.body_status==='empty').length,hksz_located:h.filter(n=>pointsForRegion(n,'hksz').length).length,hksz_points:h.reduce((s,n)=>s+pointsForRegion(n,'hksz').length,0),photo_notes:data.rows.filter(n=>n.images?.length).length,photos_saved:data.rows.reduce((s,n)=>s+(n.photo_saved||0),0),located_notes:data.rows.filter(n=>n.locations.length).length,located_points:data.rows.reduce((s,n)=>s+n.locations.length,0),classified:data.rows.filter(n=>n.category!=='待分类').length,hksz_classified:h.filter(n=>n.category!=='待分类').length});
+c.processing_note='港深逐条读取；地点和分店尚未确认的保留待定位。照片数量以成功提取和缓存为准。';
+const foodPending=h.filter(n=>n.food_groups.includes('菜系')&&!n.food_cuisines.length);
+Object.assign(c,{food_classified_hksz:h.filter(n=>n.food_groups.length).length,food_classification_groups_hksz:Object.fromEntries(foodGroups.map(g=>[g,h.filter(n=>n.food_groups.includes(g)).length])),food_cuisine_unspecified_hksz:foodPending.length,food_unresolved_hksz:foodPending.length,food_taxonomy_version:foodTaxonomyVersion});
+const queueFile=path.join(root,'outputs/gba-queue.json');if(fs.existsSync(queueFile)){const q=JSON.parse(fs.readFileSync(queueFile));const ids=new Set(q.map(n=>n.id));const gba=data.rows.filter(n=>ids.has(n.id));Object.assign(c,{gba_candidates:gba.length,gba_processed:gba.filter(n=>n.detail_checked_at).length,gba_loaded:gba.filter(n=>n.content).length,gba_remaining:gba.filter(n=>!n.detail_checked_at).length,gba_failed:gba.filter(n=>n.detail_error&&!n.content).length});}
+const pending=h.filter(n=>!n.locations.length).map(n=>({id:n.id,title:n.title,category:n.category,reason:n.location_review_reason|| (n.body_status==='empty'?'原笔记未提供正文，需核对照片':!n.content?'正文尚未读取':n.category==='学习工作'||n.category==='量化金融'?'学习/工作主题，未确认对应实体地点':n.place_hints?.length?'已有地点线索，待核对分店和坐标':'地点可能在照片/视频或正文未提供地址'),hints:n.place_hints,photo_saved:n.photo_saved||0,photo_total:n.photo_total||null}));
+fs.writeFileSync(file+'.tmp',JSON.stringify({...sourceData,coverage:c},null,2));fs.renameSync(file+'.tmp',file);fs.writeFileSync(path.join(root,'outputs/hksz-pending-review.json'),JSON.stringify(pending,null,2));console.log(c);

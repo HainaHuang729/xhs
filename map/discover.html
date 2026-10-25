@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#edf3f7"><title>吃喝玩乐 · 收藏去处</title><link rel="stylesheet" href="discover.css"><link rel="stylesheet" href="discover-focus.css"></head>
+<body data-look="focus">
+ <header class="discovery-header"><a id="backToMap" class="discovery-brand" href="./"><span aria-hidden="true">⌖</span> 收藏去处</a><a id="compareLooks" href="discover-versions.html?look=focus">界面样式</a></header>
+ <main class="discovery-page">
+  <div class="discovery-intro"><h1 id="pageHeading">今天，吃点什么？</h1><button id="openFacetDialog" class="filter-trigger" aria-haspopup="dialog"><span id="regionLabel">港深</span><svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M3 6h14M3 14h14"/><circle cx="7" cy="6" r="2" fill="var(--page)"/><circle cx="13" cy="14" r="2" fill="var(--page)"/></svg><span class="sr-only">地区和分类筛选</span></button></div>
+  <nav id="discoveryDomains" class="discovery-domains" aria-label="吃喝玩乐分类"><span id="domainIndicator" aria-hidden="true"></span></nav>
+  <nav id="discoveryFacets" class="quick-facets" aria-label="常用细分类"></nav>
+  <section class="recommendation-area" aria-label="对应收藏帖子">
+   <p id="discoverySummary" class="sr-only" role="status">正在读取本地收藏…</p>
+   <div class="pick-toolbar"><span id="picksLabel">正在读取收藏…</span><div class="pick-actions"><button id="previousPick" aria-label="上一篇" hidden>←</button><button id="changePicks" hidden>换一组 <span aria-hidden="true">↻</span></button></div></div>
+   <div id="recommendedPosts" class="post-grid"></div>
+   <div id="focusNavigation" class="focus-navigation" hidden><span class="gesture-hint">左右滑动，发现下一篇</span></div>
+   <div id="discoveryEmpty" class="discovery-empty" hidden><h2>暂时没有合适的推荐</h2><p id="emptyReason"></p><button id="clearLocated">也看地点待确认的帖子</button></div>
+   <section id="otherPostsSection" class="other-posts-section" aria-label="更多对应帖子" hidden><button id="toggleOtherPosts" aria-expanded="false" aria-controls="otherPosts">看看更多收藏</button><div id="otherPosts" class="post-grid other-grid" hidden></div></section>
+  </section>
+  <footer class="discovery-footer"><span>从你的收藏出发</span><a id="mapLink" href="./">打开地图</a></footer>
+ </main>
+ <dialog id="facetDialog" class="filter-dialog" aria-labelledby="facetDialogHeading"><div class="dialog-heading"><h2 id="facetDialogHeading">筛选</h2><button id="closeFacetDialog" class="close-dialog" aria-label="关闭筛选" autofocus>×</button></div><div class="filter-options"><label class="region-picker">地区<select id="discoverRegion" aria-label="推荐地区"><option value="hksz">香港 + 深圳</option><option value="gba">整个大湾区</option><option>香港</option><option>深圳</option><option>广州</option><option>澳门</option><option>珠海</option><option>佛山</option><option>东莞</option><option>惠州</option><option>中山</option><option>江门</option><option>肇庆</option><option value="all">全部地区</option></select></label><label class="located-toggle"><span>只看有地图位置</span><input id="locatedOnly" type="checkbox"></label></div><h3 id="facetHeading">想吃什么？</h3><div id="facetDialogItems"></div><div class="filter-done"><button id="applyFilters">查看帖子</button></div></dialog>
+ <dialog id="postDialog" class="post-dialog" aria-labelledby="postDialogHeading"><button id="closePostDialog" class="close-dialog" aria-label="关闭帖子" autofocus>×</button><div id="postDialogContent"></div></dialog>
+ <script type="module" src="discover-app.js"></script>
+</body></html>

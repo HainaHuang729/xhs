@@ -1,0 +1,20 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#f5f7fb"><title>三种打开方式 · 收藏去处</title><link rel="stylesheet" href="versions.css"></head>
+<body>
+ <header class="compare-header"><a class="compare-brand" href="./">⌖ <span>收藏去处</span></a><span>本地界面预览</span></header>
+ <main class="compare-main">
+  <div class="compare-intro"><h1>给你的收藏，选一种打开方式。</h1><p>三版使用同一份真实收藏。可以直接搜索、切换分类，也可以打开地图看看。</p></div>
+  <div class="version-cards" role="group" aria-label="选择预览版本">
+   <button class="version-card" data-version="atlas" aria-pressed="true"><span class="miniature mini-atlas" aria-hidden="true"><span class="mini-list"><i></i><img data-sample="0" alt=""><i></i><img data-sample="1" alt=""></span><svg viewBox="0 0 250 100"><path d="M0 0H250V30L223 28 201 44 172 33 158 54 140 49 127 70 103 61 85 82 60 65 32 77 0 57Z"/><circle cx="177" cy="24" r="6"/><circle cx="151" cy="42" r="4"/><circle cx="115" cy="49" r="5"/><circle cx="82" cy="54" r="4"/></svg></span><span class="choice-heading"><strong>海湾漫游</strong><span class="choice-check">✓</span></span><span class="choice-description">边看地图，边选下一站</span></button>
+   <button class="version-card" data-version="shelves" aria-pressed="false"><span class="miniature mini-shelves" aria-hidden="true"><span class="mini-rail"><i></i><i></i><i></i><i></i></span><span class="mini-books"><span><img data-sample="2" alt=""><i></i><i></i></span><span><img data-sample="3" alt=""><i></i><i></i></span></span></span><span class="choice-heading"><strong>收藏书架</strong><span class="choice-check">✓</span></span><span class="choice-description">先按主题，把喜欢的找出来</span></button>
+   <button class="version-card" data-version="gallery" aria-pressed="false"><span class="miniature mini-gallery" aria-hidden="true"><img data-sample="0" alt=""><img data-sample="2" alt=""><img data-sample="3" alt=""></span><span class="choice-heading"><strong>灵感画册</strong><span class="choice-check">✓</span></span><span class="choice-description">大图翻阅，用照片找灵感</span></button>
+  </div>
+  <section class="preview-section" aria-labelledby="previewTitle">
+   <div class="preview-tools"><div><h2 id="previewTitle">海湾漫游</h2><span id="previewDescription">地图优先</span></div><div class="preview-actions"><div class="device-switch" role="group" aria-label="预览屏幕"><button data-device="phone" aria-pressed="true">手机</button><button data-device="desktop" aria-pressed="false">电脑</button></div><a id="openVersion" href="./?ui=atlas" target="_blank" rel="noreferrer">打开这一版 ↗</a></div></div>
+   <div id="previewOuter" class="preview-outer"><div id="previewStage" class="preview-stage"><iframe id="livePreview" title="海湾漫游交互预览" src="./?ui=atlas&amp;preview=1"></iframe></div></div>
+   <p class="preview-footnote">这里可以直接操作；照片、正文、分类和地点都来自本地收藏。</p>
+  </section>
+ </main>
+ <script type="module" src="versions.js"></script>
+</body></html>

@@ -1,0 +1,12 @@
+<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>收藏地图使用说明</title><style>body{max-width:760px;margin:50px auto;padding:20px;font:16px/1.9 system-ui;color:#284d56}a{color:#287a88}pre{background:#eff5f6;padding:20px;overflow:auto}h1{font-size:28px}</style><h1>把收藏里的地点带到地图</h1><p>地图支持本仓库的收藏导出 JSON、正文样本 JSON 和整理后的 JSON。可重复导入，按笔记 ID 合并。</p><ol><li>在小红书网页版登录，打开自己的「收藏 → 笔记」。</li><li>使用仓库 tools/xhs-map-exporter.js 导出标题和签名链接；需要正文时接着运行 tools/xhs-map-details.js（默认提取 20 条旅行 / 餐饮样本）。</li><li>回到地图点击「导入收藏 JSON」。只有明确的 WGS84 坐标会放置标记，其他收藏列为待定位。</li><li>待定位笔记可以点击「地图搜索」，点击「补充地点」，输入城市和具体店名，搜索候选地点。核对分店和地址后保存；也可以手动填写 WGS84 坐标。</li></ol><p>一篇笔记可以关联多个地点。导入结构如下：</p><pre>[{
+  "id": "笔记ID",
+  "title": "收藏标题",
+  "url": "https://www.xiaohongshu.com/explore/...",
+  "content": "笔记正文",
+  "locations": [{
+    "name": "店铺或景点名称",
+    "lat": 22.419,
+    "lng": 114.206,
+    "coordinateSystem": "WGS84"
+  }]
+}]</pre><p>数据存储在当前浏览器的 localStorage；清除网站数据会删除本机保存，请定期导出备份。收藏内容不上传；底图服务会收到地图瓦片请求，点击「地图搜索」会把查询词发送给 Google Maps。</p><a href="/">返回地图</a></html>

@@ -176,6 +176,7 @@ npm start
 ```sh
 npm run check:map
 npm run check:discover
+npm run check:hosted
 python3 scripts/check-map-server.py
 ```
 
@@ -242,6 +243,6 @@ node tools/audit-map.mjs
 
 私人 Sites 项目位于 `../sites/favorites-atlas/`，项目身份在该目录的 `.openai/hosting.json`，后续必须复用，不能重复创建站点。网址以 Sites 成功部署返回的 URL 为准。访问权限应保持仅所有者，所有静态页面、收藏 JSON 和媒体均由站点登录保护。此版本保留同样的手机界面和漫游图，电脑关闭后仍可访问。
 
-使用带 Pillow 的 Python 运行 `tools/export_hosted_map.py ../sites/favorites-atlas --web-photos` 生成自包含快照（Sites 发布包有 256 MiB 上限，完整图组需使用手机优化版本）：复制地图文件、已有收藏和所有被引用的本地照片；去掉导出诊断、远程图片列表与原笔记临时访问令牌。云端默认读取 `data/favorites.json`，手机二维码使用站点本身的地址，不依赖局域网配对接口。新增收藏和核对结果需要重新导出并通过 Sites 发布，手机手动修改目前仍只保存在该浏览器。原始本地导出不会被覆盖。
+使用带 Pillow 的 Python 运行 `tools/export_hosted_map.py ../sites/favorites-atlas --web-photos` 生成自包含快照（Sites 发布包有 256 MiB 上限）：读取最新原帖与分类、地区复核结果，复制地图文件和已缓存的本地照片；去掉导出诊断、远程图片列表与原笔记临时访问令牌。默认将照片副本优化为最长边 1200 像素、WebP 质量 64，支持 `--max-edge` 和 `--quality` 调整，原图保留在本机。尚未缓存的原帖图片不嵌入快照。所有页面（包括单卡漫游和版式预览）读取 `data/favorites.json`，不调用本地收藏接口。手机二维码使用站点本身的地址，不依赖局域网配对。新增收藏和核对结果需要重新导出并通过 Sites 发布，手机手动修改目前仍只保存在该浏览器。原始本地导出不会被覆盖。
 
 导出后先检查站点目录里的 `npm run check`（更新数据数量时同步更新快照预期），再遵循 Sites 的源代码提交、打包和私有发布工作流。部署源中包含私人收藏与原图，请勿推送到原始小红书工具的公共仓库。

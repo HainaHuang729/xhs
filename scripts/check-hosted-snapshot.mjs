@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {prepareHostedSnapshot} from '../tools/prepare_hosted_snapshot.mjs';
+const id='1'.repeat(24),other='2'.repeat(24),cached=[`/media/${id}/0.webp`,`/media/${id}/2.webp`];
+const payload={rows:[{id,title:'深圳咖啡店',category_manual:'咖啡茶饮',url:'https://example.com/post',original_post:{id,status:'read',content:'原帖正文与交通说明',images:['https://img.xhscdn.com/one','https://img.xhscdn.com/two','https://img.xhscdn.com/three'],cached_images:[{index:0,path:cached[0]},{index:2,path:cached[1]}]},locations:[{name:'甲咖啡店',address:'深圳',lat:22.55,lng:114.1,photo_index:2},{name:'商场参考点',lat:22.5,lng:114,precision:'area'}]},{id:other,title:'深圳咖啡店',url:'https://example.com/uncached',images:['https://img.xhscdn.com/missing']}],discovery_reviews:{[id]:{reason:'单店复核说明'}}};
+const before=JSON.stringify(payload),out=prepareHostedSnapshot(payload,p=>cached.includes(p));
+assert.equal(JSON.stringify(payload),before,'the local export must remain unchanged');
+assert.equal(out.rows[0].content,'原帖正文与交通说明');
+assert.deepEqual(out.rows[0].images,cached);assert.equal(out.rows[0].photo_total,3);assert.equal(out.rows[0].photo_complete,false);
+assert.equal(out.rows[0].locations.length,1);assert.deepEqual(out.rows[0].locations[0].photo_images,[cached[1]]);assert.equal(out.rows[0].locations[0].photo_index,undefined);
+assert.deepEqual(out.rows[1].images,[]);assert.equal(out.rows[1].cover_image,'');
+assert.equal(out.coverage.photos_saved,2);assert.deepEqual(out.discovery_reviews,payload.discovery_reviews);
+console.log('云端快照检查通过：原帖覆盖、仅缓存图片、门店配图索引、参考点过滤及原始数据不变。');

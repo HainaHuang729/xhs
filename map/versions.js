@@ -20,7 +20,7 @@ for(const button of document.querySelectorAll('[data-version]'))button.onclick=(
 for(const button of document.querySelectorAll('[data-device]'))button.onclick=()=>{device=button.dataset.device;for(const b of document.querySelectorAll('[data-device]'))b.setAttribute('aria-pressed',String(b===button));resizePreview();};
 new ResizeObserver(resizePreview).observe($('#previewOuter'));showVariant(active);
 try{
- const res=await fetch('/api/favorites');if(!res.ok)throw Error('no local favorites');const data=await res.json();
+ const res=await fetch(document.querySelector('meta[name="favorites-source"]')?.content||'/api/favorites');if(!res.ok)throw Error('no local favorites');const data=await res.json();
  const photos=normalize(data).filter(n=>regionMatches(n,'hksz')&&/咖啡|甜品|布丁|蛋糕|冰淇淋/.test(n.title)).map(n=>safePhoto(n.cover_image)).filter(src=>src.startsWith('/media/')).slice(0,8);
  for(const img of document.querySelectorAll('[data-sample]'))if(photos.length)img.src=photos[Number(img.dataset.sample)%photos.length];
 }catch{/* The complete interactive preview still provides its own connection state. */}

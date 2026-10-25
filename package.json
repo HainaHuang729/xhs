@@ -9,6 +9,7 @@
     "start": "python3 tools/serve_map.py",
     "check:map": "node scripts/check-map.mjs",
     "check:discover": "node scripts/check-discovery.mjs && node scripts/check-discovery-motion.mjs",
+    "check:hosted": "node scripts/check-hosted-snapshot.mjs",
     "check:food": "node scripts/check-food-categories.mjs",
     "start:lan": "python3 tools/serve_map.py --lan"
   }
